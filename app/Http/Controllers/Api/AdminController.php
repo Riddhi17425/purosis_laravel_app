@@ -96,7 +96,16 @@ class AdminController extends Controller
         ]);
     }
 
-    
+    public function getDetails(Request $request){
+        $data = [];
+        $data['brochure_category'] = config('global_values.brochure_category');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Details get successful',
+            'data' => $data
+        ]);
+    }
     
 }
  
