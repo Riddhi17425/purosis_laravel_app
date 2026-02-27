@@ -3,7 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Models\{Admin, Dealer, Distributor};
-use App\Http\Controllers\Api\{AdminController, DealerController, DistributorController, ProductController, MarketingController};
+use App\Http\Controllers\Api\{AdminController, DealerController, DistributorController, ProductController, MarketingController, PostController, ReelController};
 
 /*
 |--------------------------------------------------------------------------
@@ -35,6 +35,12 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
     
     Route::post('add-update-brochure', [MarketingController::class, 'addUpdateBrochure']);
     Route::get('get-brochures', [MarketingController::class, 'getBrochures']);
+
+    Route::post('add-update-post', [PostController::class, 'addUpdatePost']);
+    Route::get('get-posts', [PostController::class, 'getPosts']);
+
+    Route::post('add-update-reel', [ReelController::class, 'addUpdateReel']);
+    Route::get('get-reels', [ReelController::class, 'getReels']);
 
     Route::get('get-details', [AdminController::class, 'getDetails']);
 
