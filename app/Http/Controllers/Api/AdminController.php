@@ -99,6 +99,10 @@ class AdminController extends Controller
     public function getDetails(Request $request){
         $data = [];
         $data['brochure_category'] = config('global_values.brochure_category');
+        $data['post_category'] = config('global_values.post_category');
+        $data['reel_category'] = config('global_values.reel_category');
+        $data['video_category'] = config('global_values.video_category');
+        $data['video_type'] = config('global_values.video_type');
 
         return response()->json([
             'success' => true,

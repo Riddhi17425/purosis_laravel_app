@@ -35,6 +35,10 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
     
     Route::post('add-update-brochure', [MarketingController::class, 'addUpdateBrochure']);
     Route::get('get-brochures', [MarketingController::class, 'getBrochures']);
+    Route::post('add-update-video', [MarketingController::class, 'addUpdateVideo']);
+    Route::get('get-videos', [MarketingController::class, 'getVideos']);
+    Route::post('add-update-leaflet', [MarketingController::class, 'addUpdateLeaflet']);
+    Route::get('get-leaflets', [MarketingController::class, 'getLeaflets']);
 
     Route::post('add-update-post', [PostController::class, 'addUpdatePost']);
     Route::get('get-posts', [PostController::class, 'getPosts']);

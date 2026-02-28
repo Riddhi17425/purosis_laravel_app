@@ -61,7 +61,7 @@ class ReelController extends Controller
         if ($request->hasFile('media_file')) {
             $file = $request->file('media_file');
             $fileName = $reel->id . '_' . time() . '_' . $file->getClientOriginalName();
-            $destinationPath = storage_path('app/public/reel_media');
+            $destinationPath = public_path('images/reel_media');
             // Create folder if not exists
             if (!file_exists($destinationPath)) {
                 mkdir($destinationPath, 0755, true);
@@ -83,7 +83,7 @@ class ReelController extends Controller
         if ($request->hasFile('thumbnail_image')) {
             $file = $request->file('thumbnail_image');
             $fileName = $reel->id . '_' . time() . '_' . $file->getClientOriginalName();
-            $destinationPath = storage_path('app/public/reel_thumbnail');
+            $destinationPath = public_path('images/reel_thumbnail');
             // Create folder if not exists
             if (!file_exists($destinationPath)) {
                 mkdir($destinationPath, 0755, true);
@@ -127,6 +127,12 @@ class ReelController extends Controller
         }
         $reels = $reels->get();
         if(isset($reels) && is_countable($reels) && count($reels) > 0){
+            foreach($reels as $key => $val){
+                $mediaPath = asset('images/reel_media');
+                $thumbnailPath = asset('images/reel_thumbnail');
+                $val->media_file = $mediaPath.'/'.$val->media_file;
+                $val->thumbnail_image = $thumbnailPath.'/'.$val->thumbnail_image;
+            }
             return response()->json([
                 'success' => true,
                 'message' => 'Reels get Successfully',

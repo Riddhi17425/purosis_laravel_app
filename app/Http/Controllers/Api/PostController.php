@@ -17,7 +17,7 @@ class PostController extends Controller
             'post_id' => 'nullable|exists:posts,id',
             'title' => 'required',
             'category' => 'required|in:' . implode(',', array_keys($postCategories)),
-            'media_file' => 'required|file|max:2048',
+            'media_file' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'month' => 'nullable',
             'year' => 'nullable',
             'description' => 'required',
@@ -26,7 +26,7 @@ class PostController extends Controller
             'post_id.exists' => 'The selected post is invalid.',
             'title.required' => 'The title field is required.',
             'category.required' => 'Please select a category.',
-            'media_file.required' => 'Please upload a PDF file.',
+            'media_file.required' => 'Please upload a Image file.',
             'media_file.file' => 'The uploaded file must be a valid file.',
             'media_file.mimes' => 'Only files are allowed.',
             'media_file.max' => 'The  file must not exceed 2MB in size.',
@@ -54,22 +54,22 @@ class PostController extends Controller
         $post->save();
 
         if ($request->hasFile('media_file')) {
+            $path = public_path('images/post_images');
             $file = $request->file('media_file');
             $fileName = $post->id . '_' . time() . '_' . $file->getClientOriginalName();
-            $destinationPath = storage_path('app/public/post_media');
             // Create folder if not exists
-            if (!file_exists($destinationPath)) {
-                mkdir($destinationPath, 0755, true);
+            if (!file_exists($path)) {
+                mkdir($path, 0755, true);
             }
             // Delete old file if exists
             if ($post->media_file) {
-                $oldFile = $destinationPath . '/' . $post->media_file;
+                $oldFile = $path . '/' . $post->media_file;
                 if (file_exists($oldFile)) {
                     unlink($oldFile);
                 }
             }
             // Move new file
-            $file->move($destinationPath, $fileName);
+            $file->move($path, $fileName);
             // Save new filename in DB
             $post->media_file = $fileName;
             $post->save();
@@ -81,7 +81,7 @@ class PostController extends Controller
             'data' => $post
         ]);
     }
-// $fullPath = storage_path('app/' . $post->media_file);
+
     public function getPosts(Request $request){
         $validator = Validator::make($request->all(), [
             'post_id' => 'nullable|exists:posts,id',
@@ -100,6 +100,10 @@ class PostController extends Controller
         }
         $posts = $posts->get();
         if(isset($posts) && is_countable($posts) && count($posts) > 0){
+            foreach($posts as $key => $val){
+                $path = asset('images/post_images');
+                $val->media_file = $path.'/'.$val->media_file;
+            }
             return response()->json([
                 'success' => true,
                 'message' => 'Posts get Successfully',
