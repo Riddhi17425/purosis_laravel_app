@@ -5,5 +5,5 @@ return [
     'reel_category' => ['reel1' => 'Reel 1'],
     'video_category' => ['videocat1' => 'Video Category 1'],
     'video_type' => ['videotype1' => 'Video Type 1'],
-
+    'leaflet_category' => ['leaflet1' => 'Leaflet 1'],
 ];
