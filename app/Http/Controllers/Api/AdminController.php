@@ -111,5 +111,76 @@ class AdminController extends Controller
         ]);
     }
     
+    public function addUpdateProfile(Request $request){
+        $profileCategories = config('global_values.profile_category');
+        $validator = Validator::make($request->all(), [
+            'admin_id' => 'nullable|exists:admins,id',
+            'name' => 'required',
+            'phone_no' => 'required',
+            'email' => 'required',
+        ], [
+            'admin_id.exists' => 'The selected admin is invalid.',
+            'name.required' => 'The name field is required.',
+            'phone_no.required' => 'The mobile field is required.',
+            'phone_no.digits_between' => 'Mobile number must be between 10 and 15 digits.',
+            'email.required' => 'The email field is required.',
+            'email.email' => 'Please enter a valid email address.'
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        if ($request->admin_id) {
+            $profile = Admin::find($request->admin_id);
+        } else {
+            $profile = new Admin();
+        }
+        $profile->name = $request->name ?? null;
+        $profile->phone_no = $request->phone_no ?? null;
+        $profile->email = $request->email ?? null;
+        $profile->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile stored Successfully',
+            'data' => $profile
+        ]);
+    }
+// $fullPath = storage_path('app/' . $reel->media_file);
+    public function getProfiles(Request $request){
+        $validator = Validator::make($request->all(), [
+            'admin_id' => 'nullable|exists:admins,id',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $profiles = Admin::select('id', 'name', 'phone_no', 'email');
+        if(isset($request->admin_id) && $request->admin_id != ''){
+            $profiles = $profiles->where('id', $request->admin_id);
+        }
+        $profiles = $profiles->get();
+        if(isset($profiles) && is_countable($profiles) && count($profiles) > 0){
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Profiles get Successfully',
+                'data' => $profiles
+            ]);
+        }else{
+            return response()->json([
+                'success' => false,
+                'message' => 'Profiles are not Found',
+            ]);
+        }
+    }
 }
  

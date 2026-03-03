@@ -252,12 +252,135 @@ class MarketingController extends Controller
     }
 
     public function addUpdateLeaflet(Request $request){
+        $leafletCategories = config('global_values.leaflet_category');
+        $validator = Validator::make($request->all(), [
+            'leaflet_id' => 'nullable|exists:leaflets,id',
+            'title' => 'required',
+            'category' => 'required|in:' . implode(',', array_keys($leafletCategories)),
+            'media_file'     => 'required|array|min:1',       
+            'media_file.*'   => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'month' => 'nullable',
+            'year' => 'nullable',
+            'description' => 'required',
+            'is_featured' => 'nullable|in:0,1',
+        ], [
+            'leaflet_id.exists' => 'The selected leaflet is invalid.',
+            'title.required' => 'The title field is required.',
+            'category.required' => 'Please select a category.',
+            'media_file.required'    => 'Please upload at least one PDF file.',
+            'media_file.array'       => 'Media files must be sent as an array.',
+            'media_file.min'         => 'Please upload at least one PDF file.',
+            'media_file.*.mimes'     => 'Only PDF files are allowed.',
+            'media_file.*.max'       => 'Each PDF must not exceed 2MB.',
+            'description.required' => 'The description field is required.',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
 
+        if ($request->leaflet_id) {
+            $leaflet = Leaflet::find($request->leaflet_id);
+        } else {
+            $leaflet = new Leaflet();
+        }
+        $leaflet->title = $request->title;
+        $leaflet->category = $request->category ?? null;
+        $leaflet->month = $request->month ?? null;
+        $leaflet->year = $request->year ?? null;
+        $leaflet->description = $request->description ?? null;
+        $leaflet->is_featured = $request->is_featured ?? 0;
+        $leaflet->save();
+
+        if ($request->hasFile('media_file')) {
+        $destinationPath = public_path('leaflet_media');
+        if (!file_exists($destinationPath)) {
+            mkdir($destinationPath, 0755, true);
+        }
+
+        $existingFiles = $leaflet->media_file ? json_decode($leaflet->media_file, true) : [];
+        $newFiles = [];
+
+        foreach ($request->file('media_file') as $file) {
+            if (!$file->isValid()) continue;
+
+            $fileName = $leaflet->id . '_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            
+            $file->move($destinationPath, $fileName);
+            $newFiles[] = $fileName;
+        }
+
+        // Merge old + new (or replace — your choice)
+        // Option A: replace completely
+        $leaflet->media_file = json_encode($newFiles);
+
+        // Option B: append new files (uncomment if preferred)
+        // $allFiles = array_merge($existingFiles, $newFiles);
+        // $leaflet->media_file = json_encode(array_unique($allFiles));
+
+        $leaflet->save();
+    }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Leaflet stored Successfully',
+            'data' => $leaflet
+        ]);
     }
 
     public function getLeaflets(Request $request){
-        
+    $validator = Validator::make($request->all(), [
+        'leaflet_id' => 'nullable|exists:leaflet,id',
+    ]);
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed.',
+            'errors' => $validator->errors(),
+        ]);
     }
+
+    $leaflets = Leaflet::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured');
+    
+    if (isset($request->leaflet_id) && $request->leaflet_id != '') {
+        $leaflets = $leaflets->where('id', $request->leaflet_id);
+    }
+    
+    $leaflets = $leaflets->get();
+
+    if ($leaflets->isEmpty()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Leaflet are not Found',
+        ]);
+    }
+
+    $basePath = asset('leaflet_media') . '/';
+
+    foreach ($leaflets as $val) {
+        // media_file JSON string hai → array mein convert
+        $files = $val->media_file ? json_decode($val->media_file, true) : [];
+
+        // agar purana single string hai to array bana do (compatibility)
+        if (is_string($files)) {
+            $files = [$files];
+        }
+
+        // ab $val->media_file mein array of full URLs daal do
+        $val->media_file = array_map(function ($filename) use ($basePath) {
+            return $basePath . $filename;
+        }, $files);
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Leaflets get Successfully',
+        'data' => $leaflets
+    ]);
+}
 
 
 }

@@ -3,7 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Models\{Admin, Dealer, Distributor};
-use App\Http\Controllers\Api\{AdminController, DealerController, DistributorController, ProductController, MarketingController, PostController, ReelController};
+use App\Http\Controllers\Api\{AdminController, DealerController, DistributorController, ProductController, MarketingController, PostController, ReelController, ProfileController};
 
 /*
 |--------------------------------------------------------------------------
@@ -26,6 +26,9 @@ Route::post('admin/send-otp', [AdminController::class, 'sendAdminOtp']);
 Route::post('admin/verify-otp', [AdminController::class, 'verifyAdminOtp']);
 Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
 
+    Route::post('add-update-profile', [AdminController::class, 'addUpdateProfile']);
+    Route::get('get-profiles', [AdminController::class, 'getProfiles']);
+
     Route::post('add-update-category', [ProductController::class, 'addUpdateCategory']);
     Route::get('get-categories', [ProductController::class, 'getCategories']);
     Route::post('add-update-subcategory', [ProductController::class, 'addUpdateSubCategory']);
@@ -46,10 +49,19 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
     Route::post('add-update-reel', [ReelController::class, 'addUpdateReel']);
     Route::get('get-reels', [ReelController::class, 'getReels']);
 
+    // Route::post('add-update-profile', [ProfileController::class, 'addUpdateProfile']);
+    // Route::get('get-profiles', [ProfileController::class, 'getProfiles']);
+
     Route::get('get-details', [AdminController::class, 'getDetails']);
 
+    
 });
 
+Route::get('get-post', [DistributorController::class, 'getPosts']);
+    Route::get('get-brochure', [DistributorController::class, 'getBrochures']);
+    Route::get('get-reel', [DistributorController::class, 'getReels']);
+    Route::get('get-leaflet', [DistributorController::class, 'getLeaflets']);
+    
 // Dealer
 Route::middleware('auth:dealer-api')->prefix('dealer')->group(function () {
     Route::get('/profile', function (Request $request) {
