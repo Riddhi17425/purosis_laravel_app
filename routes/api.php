@@ -57,7 +57,6 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
     Route::post('stock-outward', [PromotionalStockController::class, 'stockOutward']);
 
 
-    
 });
 
 Route::prefix('distributor')->group(function () {
@@ -69,17 +68,24 @@ Route::prefix('distributor')->group(function () {
    
 });
 
-
-// Dealer
-Route::middleware('auth:dealer-api')->prefix('dealer')->group(function () {
-    Route::get('/profile', function (Request $request) {
-        return $request->user(); // dealer info
-    });
-});
+Route::post('user/send-otp', [AdminController::class, 'distributorSendAdminOtp']);
+Route::post('user/verify-otp', [AdminController::class, 'distributorVerifyAdminOtp']);
 
 // Distributor
 Route::middleware('auth:distributor-api')->prefix('distributor')->group(function () {
-    Route::get('/profile', function (Request $request) {
-        return $request->user(); // distributor info
-    });
+    // Route::get('/profile', function (Request $request) {
+    //     return $request->user(); // distributor info
+    // });
+
+    
 }); 
+
+// Dealer
+Route::middleware('auth:dealer-api')->prefix('dealer')->group(function () {
+    // Route::get('/profile', function (Request $request) {
+    //     return $request->user(); // dealer info
+    // });
+
+});
+
+

@@ -4,13 +4,116 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\{Post,Brochure,Reel,Leaflet, Subcategory, Product};
+use App\Models\{Post,Brochure,Reel,Leaflet, Subcategory, Product, Distributor, Dealer};
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Hash;
 
 class DistributorController extends Controller
 {
+    public function sendAdminOtp(Request $request){
+        $userType = config('global_values.user_types');
+        $validator = Validator::make($request->all(), [
+            'user_type' => 'required|in:' . implode(',', $userType),
+            'phone_no' => 'required',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $user = '';
+        if(isset($request->user_type) && strtolower($request->user_type) == 'distributor'){
+            $user = Distributor::where('phone_no', $request->phone_no)->first();
+        }elseif(isset($request->user_type) && strtolower($request->user_type) == 'dealer'){
+            $user = Dealer::where('phone_no', $request->phone_no)->first();
+        }
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Mobile number not registered'
+            ], 404);
+        }
+
+        $otp = rand(1000, 9999);
+        $user->update([
+            'otp' => $otp,
+            'otp_expires_at' => now()->addMinutes(5)
+        ]);
+
+        // 🔹 Here integrate SMS API
+        // Example: sendSMS($admin->mobile, "Your OTP is $otp");
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OTP sent successfully',
+            'data' => $otp // remove this in production
+        ]);
+    }
+
+    public function verifyAdminOtp(Request $request){
+        $userType = config('global_values.user_types');
+        $validator = Validator::make($request->all(), [
+            'user_type' => 'required|in:' . implode(',', $userType),
+            'phone_no' => 'required',
+            'otp' => 'required'
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $user = '';
+        if(isset($request->user_type) && strtolower($request->user_type) == 'distributor'){
+            $user = Distributor::where('phone_no', $request->phone_no)->first();
+        }elseif(isset($request->user_type) && strtolower($request->user_type) == 'dealer'){
+            $user = Dealer::where('phone_no', $request->phone_no)->first();
+        }
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found'
+            ], 404);
+        }
+        if ($user->otp != $request->otp) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid OTP'
+            ]);
+        }
+        if (now()->gt($user->otp_expires_at)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'OTP expired'
+            ]);
+        }
+
+        // OTP verified — generate token
+        $token = $user->createToken('user-token')->plainTextToken;
+        // Clear OTP after success
+        $user->update([
+            'otp' => null,
+            'otp_expires_at' => null
+        ],);
+
+        $user->token = $token;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Login successful',
+            'data' => $user
+        ]);
+    }
+
     public function getPosts(Request $request){
         $validator = Validator::make($request->all(), [
             'post_id' => 'nullable|exists:posts,id',
