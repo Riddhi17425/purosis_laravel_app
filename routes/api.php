@@ -3,7 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Models\{Admin, Dealer, Distributor};
-use App\Http\Controllers\Api\{AdminController, DealerController, DistributorController, ProductController, MarketingController, PostController, ReelController, ProfileController};
+use App\Http\Controllers\Api\{AdminController, DealerController, DistributorController, ProductController, MarketingController, PostController, ReelController, ProfileController, PromotionalStockController};
 
 /*
 |--------------------------------------------------------------------------
@@ -53,15 +53,23 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
     // Route::get('get-profiles', [ProfileController::class, 'getProfiles']);
 
     Route::get('get-details', [AdminController::class, 'getDetails']);
+    Route::post('stock-inward', [PromotionalStockController::class, 'stockInward']);
+    Route::post('stock-outward', [PromotionalStockController::class, 'stockOutward']);
+
 
     
 });
 
-Route::get('get-post', [DistributorController::class, 'getPosts']);
+Route::prefix('distributor')->group(function () {
+
+    Route::get('get-post', [DistributorController::class, 'getPosts']);
     Route::get('get-brochure', [DistributorController::class, 'getBrochures']);
     Route::get('get-reel', [DistributorController::class, 'getReels']);
     Route::get('get-leaflet', [DistributorController::class, 'getLeaflets']);
-    
+   
+});
+
+
 // Dealer
 Route::middleware('auth:dealer-api')->prefix('dealer')->group(function () {
     Route::get('/profile', function (Request $request) {
