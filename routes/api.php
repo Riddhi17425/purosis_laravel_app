@@ -3,7 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Models\{Admin, Dealer, Distributor};
-use App\Http\Controllers\Api\{AdminController, DealerController, DistributorController, ProductController, MarketingController, PostController, ReelController, ProfileController, PromotionalStockController};
+use App\Http\Controllers\Api\{AdminController, DealerController, DistributorController, ProductController, MarketingController, PostController, ReelController, ProfileController, PromotionalStockController, UserController};
 
 /*
 |--------------------------------------------------------------------------
@@ -61,15 +61,15 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
 
 Route::prefix('distributor')->group(function () {
 
-    Route::get('get-post', [DistributorController::class, 'getPosts']);
-    Route::get('get-brochure', [DistributorController::class, 'getBrochures']);
-    Route::get('get-reel', [DistributorController::class, 'getReels']);
-    Route::get('get-leaflet', [DistributorController::class, 'getLeaflets']);
+    Route::get('get-post', [UserController::class, 'getPosts']);
+    Route::get('get-brochure', [UserController::class, 'getBrochures']);
+    Route::get('get-reel', [UserController::class, 'getReels']);
+    Route::get('get-leaflet', [UserController::class, 'getLeaflets']);
    
 });
 
-Route::post('user/send-otp', [AdminController::class, 'distributorSendAdminOtp']);
-Route::post('user/verify-otp', [AdminController::class, 'distributorVerifyAdminOtp']);
+Route::post('user/send-otp', [UserController::class, 'sendUsetOtp']);
+Route::post('user/verify-otp', [UserController::class, 'verifyUserOtp']);
 
 // Distributor
 Route::middleware('auth:distributor-api')->prefix('distributor')->group(function () {

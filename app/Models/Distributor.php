@@ -10,4 +10,7 @@ use Illuminate\Notifications\Notifiable;
 class Distributor extends Model
 {
     use HasFactory, HasApiTokens, Notifiable;
+    protected $guarded = [];
+
+
 }

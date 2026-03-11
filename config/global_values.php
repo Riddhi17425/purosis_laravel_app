@@ -6,5 +6,5 @@ return [
     'video_category' => ['videocat1' => 'Video Category 1'],
     'video_type' => ['videotype1' => 'Video Type 1'],
     'leaflet_category' => ['leaflet1' => 'Leaflet 1'],
-    'user_types' => ['distributor', 'dealer'],
+    'user_types' => ['admin', 'distributor', 'dealer'],
 ];

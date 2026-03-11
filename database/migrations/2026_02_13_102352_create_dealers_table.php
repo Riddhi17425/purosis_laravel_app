@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('phone_no', 20)->nullable();
             $table->integer('otp')->nullable();
             $table->timestamp('otp_expires_at')->nullable();
+            $table->tinyInteger('is_active')->default(0)->comment('0 = Inactive, 1 = Active');
             $table->timestamps();
         });
     }

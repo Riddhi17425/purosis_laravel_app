@@ -98,11 +98,12 @@ class AdminController extends Controller
 
     public function getDetails(Request $request){
         $data = [];
-        $data['brochure_category'] = config('global_values.brochure_category');
-        $data['post_category'] = config('global_values.post_category');
-        $data['reel_category'] = config('global_values.reel_category');
-        $data['video_category'] = config('global_values.video_category');
-        $data['video_type'] = config('global_values.video_type');
+        $data['brochure_category'] = $this->formatKeyValue(config('global_values.brochure_category'));
+        $data['post_category'] = $this->formatKeyValue(config('global_values.post_category'));
+        $data['reel_category'] = $this->formatKeyValue(config('global_values.reel_category'));
+        $data['video_category'] = $this->formatKeyValue(config('global_values.video_category'));
+        $data['video_type'] = $this->formatKeyValue(config('global_values.video_type'));
+        $data['user_types'] = config('global_values.user_types');
 
         return response()->json([
             'success' => true,
@@ -150,7 +151,7 @@ class AdminController extends Controller
             'data' => $profile
         ]);
     }
-// $fullPath = storage_path('app/' . $reel->media_file);
+
     public function getProfiles(Request $request){
         $validator = Validator::make($request->all(), [
             'admin_id' => 'nullable|exists:admins,id',
@@ -181,6 +182,17 @@ class AdminController extends Controller
                 'message' => 'Profiles are not Found',
             ]);
         }
+    }
+
+    protected function formatKeyValue($array){
+        $result = [];
+        foreach ($array as $key => $value) {
+            $result[] = [
+                'key' => $key,
+                'value' => $value
+            ];
+        }
+        return $result;
     }
 }
  

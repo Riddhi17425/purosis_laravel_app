@@ -1,0 +1,283 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Hash;
+use App\Models\{Post,Brochure,Reel,Leaflet, Subcategory, Product, Distributor, Dealer};
+
+class UserController extends Controller
+{
+    public function sendUsetOtp(Request $request){
+        $userType = config('global_values.user_types');
+        $validator = Validator::make($request->all(), [
+            'user_type' => 'required|in:' . implode(',', $userType),
+            'phone_no' => 'required',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $user = '';
+        if(isset($request->user_type) && strtolower($request->user_type) == 'distributor'){
+            $user = Distributor::where('phone_no', $request->phone_no)->where('is_active', 1)->first();
+        }elseif(isset($request->user_type) && strtolower($request->user_type) == 'dealer'){
+            $user = Dealer::where('phone_no', $request->phone_no)->first();
+            if(!$user && isset($request->phone_no)){
+                $user = new Dealer();
+                $user->phone_no = $request->phone_no;
+                $user->is_active = 1;
+                $user->save();
+            }else{
+                if($user->is_active == 0){
+                    $user = '';
+                }
+            }
+        }
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not Found'
+            ], 404);
+        }
+
+        $otp = rand(1000, 9999);
+        $user->update([
+            'otp' => $otp,
+            'otp_expires_at' => now()->addMinutes(5)
+        ]);
+
+        // 🔹 Here integrate SMS API
+        // Example: sendSMS($admin->mobile, "Your OTP is $otp");
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OTP sent successfully',
+            'data' => $otp // remove this in production
+        ]);
+    }
+
+    public function verifyUserOtp(Request $request){
+        $userType = config('global_values.user_types');
+        $validator = Validator::make($request->all(), [
+            'user_type' => 'required|in:' . implode(',', $userType),
+            'phone_no' => 'required',
+            'otp' => 'required'
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $user = '';
+        if(isset($request->user_type) && strtolower($request->user_type) == 'distributor'){
+            $user = Distributor::where('phone_no', $request->phone_no)->first();
+        }elseif(isset($request->user_type) && strtolower($request->user_type) == 'dealer'){
+            $user = Dealer::where('phone_no', $request->phone_no)->first();
+        }
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found'
+            ], 404);
+        }
+        if ($user->otp != $request->otp) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid OTP'
+            ]);
+        }
+        if (now()->gt($user->otp_expires_at)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'OTP expired'
+            ]);
+        }
+
+        // OTP verified — generate token
+        $token = $user->createToken('user-token')->plainTextToken;
+        // Clear OTP after success
+        $user->update([
+            'otp' => null,
+            'otp_expires_at' => null
+        ],);
+
+        $user->token = $token;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Login successful',
+            'data' => $user
+        ]);
+    }
+
+    public function getPosts(Request $request){
+        $validator = Validator::make($request->all(), [
+            'post_id' => 'nullable|exists:posts,id',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $posts = Post::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured');
+        if(isset($request->post_id) && $request->post_id != ''){
+            $posts = $posts->where('id', $request->post_id);
+        }
+        $posts = $posts->get();
+        if(isset($posts) && is_countable($posts) && count($posts) > 0){
+            foreach($posts as $key => $val){
+                $path = asset('images/post_images');
+                $val->media_file = $path.'/'.$val->media_file;
+            }
+            return response()->json([
+                'success' => true,
+                'message' => 'Posts get Successfully',
+                'data' => $posts
+            ]);
+        }else{
+            return response()->json([
+                'success' => false,
+                'message' => 'Posts are not Found',
+            ]);
+        }
+    }
+
+    public function getBrochures(Request $request){
+        $validator = Validator::make($request->all(), [
+            'brochure_id' => 'nullable|exists:brochures,id',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $brochures = Brochure::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured');
+        if(isset($request->brochure_id) && $request->brochure_id != ''){
+            $brochures = $brochures->where('id', $request->brochure_id);
+        }
+        $brochures = $brochures->get();
+        if(isset($brochures) && is_countable($brochures) && count($brochures) > 0){
+            foreach($brochures as $key => $val){
+                $path = asset('brochure_media');
+                $val->media_file = $path.'/'.$val->media_file;
+            }
+            return response()->json([
+                'success' => true,
+                'message' => 'Brochures get Successfully',
+                'data' => $brochures
+            ]);
+        }else{
+            return response()->json([
+                'success' => false,
+                'message' => 'Brochures are not Found',
+            ]);
+        }
+    }
+
+    public function getReels(Request $request){
+        $validator = Validator::make($request->all(), [
+            'reel_id' => 'nullable|exists:reels,id',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $reels = Reel::select('id', 'title', 'category', 'media_file', 'thumbnail_image', 'month', 'year', 'description', 'is_featured');
+        if(isset($request->reel_id) && $request->reel_id != ''){
+            $reels = $reels->where('id', $request->reel_id);
+        }
+        $reels = $reels->get();
+        if(isset($reels) && is_countable($reels) && count($reels) > 0){
+            foreach($reels as $key => $val){
+                $mediaPath = asset('images/reel_media');
+                $thumbnailPath = asset('images/reel_thumbnail');
+                $val->media_file = $mediaPath.'/'.$val->media_file;
+                $val->thumbnail_image = $thumbnailPath.'/'.$val->thumbnail_image;
+            }
+            return response()->json([
+                'success' => true,
+                'message' => 'Reels get Successfully',
+                'data' => $reels
+            ]);
+        }else{
+            return response()->json([
+                'success' => false,
+                'message' => 'Reels are not Found',
+            ]);
+        }
+    }
+
+    public function getLeaflets(Request $request){
+        $validator = Validator::make($request->all(), [
+            'leaflet_id' => 'nullable|exists:leaflet,id',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $leaflets = Leaflet::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured');
+        
+        if (isset($request->leaflet_id) && $request->leaflet_id != '') {
+            $leaflets = $leaflets->where('id', $request->leaflet_id);
+        }
+        
+        $leaflets = $leaflets->get();
+
+        if ($leaflets->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Leaflet are not Found',
+            ]);
+        }
+
+        $basePath = asset('leaflet_media') . '/';
+
+        foreach ($leaflets as $val) {
+            // media_file JSON string hai → array mein convert
+            $files = $val->media_file ? json_decode($val->media_file, true) : [];
+
+            // agar purana single string hai to array bana do (compatibility)
+            if (is_string($files)) {
+                $files = [$files];
+            }
+
+            // ab $val->media_file mein array of full URLs daal do
+            $val->media_file = array_map(function ($filename) use ($basePath) {
+                return $basePath . $filename;
+            }, $files);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Leaflets get Successfully',
+            'data' => $leaflets
+        ]);
+    }
+
+}

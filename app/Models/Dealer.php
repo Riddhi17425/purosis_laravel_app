@@ -10,4 +10,5 @@ use Illuminate\Notifications\Notifiable;
 class Dealer extends Model
 {
     use HasFactory, HasApiTokens, Notifiable;
+    protected $guarded = [];
 }
