@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{Admin};
+use App\Models\{Admin, Distributor};
 
 class AdminController extends Controller
 {
@@ -194,5 +194,110 @@ class AdminController extends Controller
         }
         return $result;
     }
+
+    public function addUpdateDistributor(Request $request){
+        $validator = Validator::make($request->all(), [
+            'distributor_id' => 'nullable|exists:distributors,id',
+            'name' => 'required',
+            'email' => 'required|email',
+            'phone_no' => 'required|digits_between:10,15',
+            'whatsapp_no' => 'required|digits_between:10,15',
+            'gst_number' => 'nullable',
+            'area' => 'nullable|string',
+            'billing_address' => 'required',
+            'shipping_address_line' => 'required',
+            'shipping_address_pincode' => 'required',
+        ], [
+            'name.required' => 'The name field is required.',
+            'email.required' => 'The email field is required.',
+            'email.email' => 'Please enter a valid email address.',
+            'phone_no.required' => 'The mobile number field is required.',
+            'phone_no.digits_between' => 'Mobile number must be between 10 and 15 digits.',
+            'whatsapp_no.required' => 'The WhatsApp number field is required.',
+            'whatsapp_no.digits_between' => 'WhatsApp number must be between 10 and 15 digits.',
+            'billing_address.required' => 'The billing address field is required.',
+            'shipping_address_line.required' => 'The shipping address field is required.',
+            'shipping_address_pincode.required' => 'The shipping pincode field is required.',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+        
+        try {
+            if ($request->distributor_id) {
+                $distributor = Distributor::find($request->distributor_id);
+            } else {
+                $distributor = new Distributor();
+            }
+
+            $distributor->name = $request->name;
+            $distributor->email = $request->email;
+            $distributor->phone_no = $request->phone_no;
+            $distributor->whatsapp_no = $request->whatsapp_no;
+            $distributor->gst_number = $request->gst_number;
+            $distributor->area = $request->area;
+            $distributor->billing_address = $request->billing_address;
+            $distributor->shipping_address_line = $request->shipping_address_line;
+            $distributor->shipping_address_pincode = $request->shipping_address_pincode;
+            $distributor->is_active = 1;
+            $distributor->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Distributor details are set successfully.',
+                'data' => $distributor
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getDistributor(Request $request){
+        $validator = Validator::make($request->all(), [
+            'distributor_id' => 'nullable|exists:distributors,id',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $distributor = Distributor::select('id', 'name', 'email', 'phone_no', 'whatsapp_no', 'gst_number', 'area', 'billing_address', 'shipping_address_line', 'shipping_address_pincode', 'is_active');
+        if(isset($request->distributor_id) && $request->distributor_id != ''){
+            $distributor = $distributor->where('id', $request->distributor_id);
+        }
+        $distributor = $distributor->get();
+        if(isset($distributor) && is_countable($distributor) && count($distributor) > 0){
+            foreach($distributor as $key => $val){
+                $val->total_orders = 0; //NEED TO MAKE DYNAMIC
+                $val->assets_downloaded = 0; //NEED TO MAKE DYNAMIC
+                $val->last_active = 0; //NEED TO MAKE DYNAMIC LIKE 2 DAYS ago 30 minutes ago
+            }
+        }
+        
+        if(isset($distributor) && is_countable($distributor) && count($distributor) > 0){
+            return response()->json(['success' => true, 'message' => 'Distributor get Successfully', 'data' => $distributor]);
+        }else{
+            return response()->json(['success' => false, 'message' => 'Distributor not Found']);
+        }            
+        
+    }
+
+    public function getSubCatBasedOnCat(Request $request){
+
+    }
+
+
 }
  

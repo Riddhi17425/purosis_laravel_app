@@ -21,9 +21,28 @@ use App\Http\Controllers\Api\{AdminController, DealerController, DistributorCont
 // });
 
 
-//Admin
-Route::post('admin/send-otp', [AdminController::class, 'sendAdminOtp']);
-Route::post('admin/verify-otp', [AdminController::class, 'verifyAdminOtp']);
+// COMMON
+Route::middleware('verify.token')->group(function () {
+    
+    Route::prefix('admin')->group(function () {
+        Route::post('/send-otp', [AdminController::class, 'sendAdminOtp']);
+        Route::post('/verify-otp', [AdminController::class, 'verifyAdminOtp']);
+    });
+
+    Route::prefix('user')->group(function () {
+        Route::post('/send-otp', [UserController::class, 'sendUsetOtp']);
+        Route::post('/verify-otp', [UserController::class, 'verifyUserOtp']);
+
+        Route::get('/get-post', [UserController::class, 'getPosts']);
+        Route::get('/get-brochure', [UserController::class, 'getBrochures']);
+        Route::get('/get-reel', [UserController::class, 'getReels']);
+        Route::get('/get-leaflet', [UserController::class, 'getLeaflets']);
+        Route::get('/get-details', [AdminController::class, 'getDetails']);
+    });
+
+});
+
+//ADMIN
 Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
 
     Route::post('add-update-profile', [AdminController::class, 'addUpdateProfile']);
@@ -49,38 +68,27 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
     Route::post('add-update-reel', [ReelController::class, 'addUpdateReel']);
     Route::get('get-reels', [ReelController::class, 'getReels']);
 
-    // Route::post('add-update-profile', [ProfileController::class, 'addUpdateProfile']);
-    // Route::get('get-profiles', [ProfileController::class, 'getProfiles']);
-
-    Route::get('get-details', [AdminController::class, 'getDetails']);
     Route::post('stock-inward', [PromotionalStockController::class, 'stockInward']);
     Route::post('stock-outward', [PromotionalStockController::class, 'stockOutward']);
+    Route::post('add-update-distributor', [AdminController::class, 'addUpdateDistributor']);
+    Route::get('get-distributor', [AdminController::class, 'getDistributor']);
+
 
 
 });
 
-Route::prefix('distributor')->group(function () {
-
-    Route::get('get-post', [UserController::class, 'getPosts']);
-    Route::get('get-brochure', [UserController::class, 'getBrochures']);
-    Route::get('get-reel', [UserController::class, 'getReels']);
-    Route::get('get-leaflet', [UserController::class, 'getLeaflets']);
-   
-});
-
-Route::post('user/send-otp', [UserController::class, 'sendUsetOtp']);
-Route::post('user/verify-otp', [UserController::class, 'verifyUserOtp']);
-
-// Distributor
+// DISTRIBUTOR
 Route::middleware('auth:distributor-api')->prefix('distributor')->group(function () {
     // Route::get('/profile', function (Request $request) {
     //     return $request->user(); // distributor info
     // });
+    Route::get('get-subcategory/{category_id}', [AdminController::class, 'getSubCatBasedOnCat']);
+
 
     
 }); 
 
-// Dealer
+// DEALER
 Route::middleware('auth:dealer-api')->prefix('dealer')->group(function () {
     // Route::get('/profile', function (Request $request) {
     //     return $request->user(); // dealer info

@@ -15,9 +15,15 @@ return new class extends Migration
             $table->id();
             $table->string('name')->nullable();
             $table->string('email')->nullable();
-            $table->string('phone_no', 20)->nullable();
+            $table->string('phone_no', 20);
+            $table->string('whatsapp_no', 20)->nullable();
             $table->integer('otp')->nullable();
             $table->timestamp('otp_expires_at')->nullable();
+            $table->string('gst_number')->nullable();
+            $table->string('area')->nullable();
+            $table->string('billing_address')->nullable();
+            $table->string('shipping_address_line')->nullable();
+            $table->string('shipping_address_pincode')->nullable();
             $table->tinyInteger('is_active')->default(0)->comment('0 = Inactive, 1 = Active');
             $table->timestamps();
         });

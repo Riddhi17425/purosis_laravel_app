@@ -125,6 +125,7 @@ class UserController extends Controller
     public function getPosts(Request $request){
         $validator = Validator::make($request->all(), [
             'post_id' => 'nullable|exists:posts,id',
+            'filter' => 'nullable'
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -138,6 +139,14 @@ class UserController extends Controller
         if(isset($request->post_id) && $request->post_id != ''){
             $posts = $posts->where('id', $request->post_id);
         }
+        if(isset($request->filter) && $request->filter != ''){
+            $filterVal = json_decode($request->filter);
+            $categories = $filterVal->categories ?? [];
+            $subCategories = $filterVal->sub_categories ?? [];
+            $months = $filterVal->months ?? [];
+            $years = $filterVal->years ?? [];
+        }
+
         $posts = $posts->get();
         if(isset($posts) && is_countable($posts) && count($posts) > 0){
             foreach($posts as $key => $val){
