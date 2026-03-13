@@ -33,11 +33,18 @@ Route::middleware('verify.token')->group(function () {
         Route::post('/send-otp', [UserController::class, 'sendUsetOtp']);
         Route::post('/verify-otp', [UserController::class, 'verifyUserOtp']);
 
-        Route::get('/get-post', [UserController::class, 'getPosts']);
-        Route::get('/get-brochure', [UserController::class, 'getBrochures']);
-        Route::get('/get-reel', [UserController::class, 'getReels']);
-        Route::get('/get-leaflet', [UserController::class, 'getLeaflets']);
-        Route::get('/get-details', [AdminController::class, 'getDetails']);
+        Route::get('/get-posts', [UserController::class, 'getPosts']);
+        Route::get('/get-brochures', [UserController::class, 'getBrochures']);
+        Route::get('/get-reels', [UserController::class, 'getReels']);
+        Route::get('/get-leaflets', [UserController::class, 'getLeaflets']);
+
+        Route::get('/get-videos', [UserController::class, 'getVideos']);
+        Route::get('/get-products', [UserController::class, 'getproducts']);
+
+        
+        Route::get('/get-details', [UserController::class, 'getDetails']);
+        Route::get('get-subcategories/{category_id}', [UserController::class, 'getSubCatBasedOnCat']);
+
     });
 
 });
@@ -82,7 +89,7 @@ Route::middleware('auth:distributor-api')->prefix('distributor')->group(function
     // Route::get('/profile', function (Request $request) {
     //     return $request->user(); // distributor info
     // });
-    Route::get('get-subcategory/{category_id}', [AdminController::class, 'getSubCatBasedOnCat']);
+    
 
 
     

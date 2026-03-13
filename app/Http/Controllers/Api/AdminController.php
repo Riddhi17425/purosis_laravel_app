@@ -95,22 +95,6 @@ class AdminController extends Controller
             'data' => $admin
         ]);
     }
-
-    public function getDetails(Request $request){
-        $data = [];
-        $data['brochure_category'] = $this->formatKeyValue(config('global_values.brochure_category'));
-        $data['post_category'] = $this->formatKeyValue(config('global_values.post_category'));
-        $data['reel_category'] = $this->formatKeyValue(config('global_values.reel_category'));
-        $data['video_category'] = $this->formatKeyValue(config('global_values.video_category'));
-        $data['video_type'] = $this->formatKeyValue(config('global_values.video_type'));
-        $data['user_types'] = config('global_values.user_types');
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Details get successful',
-            'data' => $data
-        ]);
-    }
     
     public function addUpdateProfile(Request $request){
         $profileCategories = config('global_values.profile_category');
@@ -182,17 +166,6 @@ class AdminController extends Controller
                 'message' => 'Profiles are not Found',
             ]);
         }
-    }
-
-    protected function formatKeyValue($array){
-        $result = [];
-        foreach ($array as $key => $value) {
-            $result[] = [
-                'key' => $key,
-                'value' => $value
-            ];
-        }
-        return $result;
     }
 
     public function addUpdateDistributor(Request $request){
@@ -292,10 +265,6 @@ class AdminController extends Controller
             return response()->json(['success' => false, 'message' => 'Distributor not Found']);
         }            
         
-    }
-
-    public function getSubCatBasedOnCat(Request $request){
-
     }
 
 

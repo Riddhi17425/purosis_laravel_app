@@ -332,55 +332,49 @@ class MarketingController extends Controller
     }
 
     public function getLeaflets(Request $request){
-    $validator = Validator::make($request->all(), [
-        'leaflet_id' => 'nullable|exists:leaflet,id',
-    ]);
-    if ($validator->fails()) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Validation failed.',
-            'errors' => $validator->errors(),
+        $validator = Validator::make($request->all(), [
+            'leaflet_id' => 'nullable|exists:leaflet,id',
         ]);
-    }
-
-    $leaflets = Leaflet::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured');
-    
-    if (isset($request->leaflet_id) && $request->leaflet_id != '') {
-        $leaflets = $leaflets->where('id', $request->leaflet_id);
-    }
-    
-    $leaflets = $leaflets->get();
-
-    if ($leaflets->isEmpty()) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Leaflet are not Found',
-        ]);
-    }
-
-    $basePath = asset('leaflet_media') . '/';
-
-    foreach ($leaflets as $val) {
-        // media_file JSON string hai → array mein convert
-        $files = $val->media_file ? json_decode($val->media_file, true) : [];
-
-        // agar purana single string hai to array bana do (compatibility)
-        if (is_string($files)) {
-            $files = [$files];
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
         }
 
-        // ab $val->media_file mein array of full URLs daal do
-        $val->media_file = array_map(function ($filename) use ($basePath) {
-            return $basePath . $filename;
-        }, $files);
-    }
+        $leaflets = Leaflet::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured');
+        if (isset($request->leaflet_id) && $request->leaflet_id != '') {
+            $leaflets = $leaflets->where('id', $request->leaflet_id);
+        }
 
-    return response()->json([
-        'success' => true,
-        'message' => 'Leaflets get Successfully',
-        'data' => $leaflets
-    ]);
-}
+        
+        
+        $leaflets = $leaflets->get();
+        if ($leaflets->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Leaflet are not Found',
+            ]);
+        }
+
+        $basePath = asset('leaflet_media') . '/';
+        foreach ($leaflets as $val) {
+            $files = $val->media_file ? json_decode($val->media_file, true) : [];
+            if (is_string($files)) {
+                $files = [$files];
+            }
+            $val->media_file = array_map(function ($filename) use ($basePath) {
+                return $basePath . $filename;
+            }, $files);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Leaflets get Successfully',
+            'data' => $leaflets
+        ]);
+    }
 
 
 }

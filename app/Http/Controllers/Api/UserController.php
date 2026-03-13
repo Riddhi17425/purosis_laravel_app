@@ -6,7 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{Post,Brochure,Reel,Leaflet, Subcategory, Product, Distributor, Dealer};
+use App\Models\{Post, Brochure, Reel, Leaflet, Subcategory, Product, Distributor, Dealer, Video};
+use DB;
 
 class UserController extends Controller
 {
@@ -114,6 +115,7 @@ class UserController extends Controller
         ],);
 
         $user->token = $token;
+        $user->role = $request->user_type;
 
         return response()->json([
             'success' => true,
@@ -139,12 +141,24 @@ class UserController extends Controller
         if(isset($request->post_id) && $request->post_id != ''){
             $posts = $posts->where('id', $request->post_id);
         }
-        if(isset($request->filter) && $request->filter != ''){
-            $filterVal = json_decode($request->filter);
-            $categories = $filterVal->categories ?? [];
-            $subCategories = $filterVal->sub_categories ?? [];
-            $months = $filterVal->months ?? [];
-            $years = $filterVal->years ?? [];
+
+       if ($request->has('filter') && $request->filter != '') {
+            $filterVal = json_decode($request->filter, true);
+            if (!empty($filterVal)) {
+                $categories = $filterVal['categories'] ?? [];
+                $months = $filterVal['months'] ?? [];
+                $months = array_map('strtolower', $months);
+                $years = $filterVal['years'] ?? [];
+                if (!empty($categories)) {
+                    $posts->whereIn('category', $categories);
+                }
+                if (!empty($months)) {
+                    $posts->whereIn(DB::raw('LOWER(month)'), $months);
+                }
+                if (!empty($years)) {
+                    $posts->whereIn('year', $years);
+                }
+            }
         }
 
         $posts = $posts->get();
@@ -169,6 +183,7 @@ class UserController extends Controller
     public function getBrochures(Request $request){
         $validator = Validator::make($request->all(), [
             'brochure_id' => 'nullable|exists:brochures,id',
+            'filter' => 'nullable'
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -182,6 +197,26 @@ class UserController extends Controller
         if(isset($request->brochure_id) && $request->brochure_id != ''){
             $brochures = $brochures->where('id', $request->brochure_id);
         }
+
+        if ($request->has('filter') && $request->filter != '') {
+            $filterVal = json_decode($request->filter, true);
+            if (!empty($filterVal)) {
+                $categories = $filterVal['categories'] ?? [];
+                $months = $filterVal['months'] ?? [];
+                $months = array_map('strtolower', $months);
+                $years = $filterVal['years'] ?? [];
+                if (!empty($categories)) {
+                    $brochures->whereIn('category', $categories);
+                }
+                if (!empty($months)) {
+                    $brochures->whereIn(DB::raw('LOWER(month)'), $months);
+                }
+                if (!empty($years)) {
+                    $brochures->whereIn('year', $years);
+                }
+            }
+        }
+
         $brochures = $brochures->get();
         if(isset($brochures) && is_countable($brochures) && count($brochures) > 0){
             foreach($brochures as $key => $val){
@@ -204,6 +239,7 @@ class UserController extends Controller
     public function getReels(Request $request){
         $validator = Validator::make($request->all(), [
             'reel_id' => 'nullable|exists:reels,id',
+            'filter' => 'nullable'
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -217,6 +253,26 @@ class UserController extends Controller
         if(isset($request->reel_id) && $request->reel_id != ''){
             $reels = $reels->where('id', $request->reel_id);
         }
+
+        if ($request->has('filter') && $request->filter != '') {
+            $filterVal = json_decode($request->filter, true);
+            if (!empty($filterVal)) {
+                $categories = $filterVal['categories'] ?? [];
+                $months = $filterVal['months'] ?? [];
+                $months = array_map('strtolower', $months);
+                $years = $filterVal['years'] ?? [];
+                if (!empty($categories)) {
+                    $reels->whereIn('category', $categories);
+                }
+                if (!empty($months)) {
+                    $reels->whereIn(DB::raw('LOWER(month)'), $months);
+                }
+                if (!empty($years)) {
+                    $reels->whereIn('year', $years);
+                }
+            }
+        }
+
         $reels = $reels->get();
         if(isset($reels) && is_countable($reels) && count($reels) > 0){
             foreach($reels as $key => $val){
@@ -241,6 +297,7 @@ class UserController extends Controller
     public function getLeaflets(Request $request){
         $validator = Validator::make($request->all(), [
             'leaflet_id' => 'nullable|exists:leaflet,id',
+            'filter' => 'nullable'
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -251,13 +308,30 @@ class UserController extends Controller
         }
 
         $leaflets = Leaflet::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured');
-        
         if (isset($request->leaflet_id) && $request->leaflet_id != '') {
             $leaflets = $leaflets->where('id', $request->leaflet_id);
         }
+
+        if ($request->has('filter') && $request->filter != '') {
+            $filterVal = json_decode($request->filter, true);
+            if (!empty($filterVal)) {
+                $categories = $filterVal['categories'] ?? [];
+                $months = $filterVal['months'] ?? [];
+                $months = array_map('strtolower', $months);
+                $years = $filterVal['years'] ?? [];
+                if (!empty($categories)) {
+                    $leaflets->whereIn('category', $categories);
+                }
+                if (!empty($months)) {
+                    $leaflets->whereIn(DB::raw('LOWER(month)'), $months);
+                }
+                if (!empty($years)) {
+                    $leaflets->whereIn('year', $years);
+                }
+            }
+        }
         
         $leaflets = $leaflets->get();
-
         if ($leaflets->isEmpty()) {
             return response()->json([
                 'success' => false,
@@ -266,17 +340,11 @@ class UserController extends Controller
         }
 
         $basePath = asset('leaflet_media') . '/';
-
         foreach ($leaflets as $val) {
-            // media_file JSON string hai → array mein convert
             $files = $val->media_file ? json_decode($val->media_file, true) : [];
-
-            // agar purana single string hai to array bana do (compatibility)
             if (is_string($files)) {
                 $files = [$files];
             }
-
-            // ab $val->media_file mein array of full URLs daal do
             $val->media_file = array_map(function ($filename) use ($basePath) {
                 return $basePath . $filename;
             }, $files);
@@ -287,6 +355,161 @@ class UserController extends Controller
             'message' => 'Leaflets get Successfully',
             'data' => $leaflets
         ]);
+    }
+
+    public function getVideos(Request $request){
+        $validator = Validator::make($request->all(), [
+            'video_id' => 'nullable|exists:videos,id',
+            'filter' => 'nullable'
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $videos = Video::select('id', 'title', 'category', 'type', 'media_file', 'thumbnail_image', 'month', 'year', 'description', 'is_featured');
+        if(isset($request->video_id) && $request->video_id != ''){
+            $videos = $videos->where('id', $request->video_id);
+        }
+
+        if ($request->has('filter') && $request->filter != '') {
+            $filterVal = json_decode($request->filter, true);
+            if (!empty($filterVal)) {
+                $categories = $filterVal['categories'] ?? [];
+                $type = $filterVal['type'] ?? [];
+                $months = $filterVal['months'] ?? [];
+                $months = array_map('strtolower', $months);
+                $years = $filterVal['years'] ?? [];
+                if (!empty($categories)) {
+                    $videos->whereIn('category', $categories);
+                }
+                if (!empty($type)) {
+                    $videos->whereIn('type', $type);
+                }
+                if (!empty($months)) {
+                    $videos->whereIn(DB::raw('LOWER(month)'), $months);
+                }
+                if (!empty($years)) {
+                    $videos->whereIn('year', $years);
+                }
+            }
+        }
+
+        $videos = $videos->get();
+        if(isset($videos) && is_countable($videos) && count($videos) > 0){
+            foreach($videos as $key => $val){
+                $mediaPath = asset('images/video_media_file');
+                $thumbnailPath = asset('images/video_media_file');
+                $val->media_file = $mediaPath.'/'.$val->media_file;
+                $val->thumbnail_image = $thumbnailPath.'/'.$val->thumbnail_image;
+            }
+            return response()->json([
+                'success' => true,
+                'message' => 'Videos are get Successfully',
+                'data' => $videos
+            ]);
+        }else{
+            return response()->json([
+                'success' => false,
+                'message' => 'Videos are not Found',
+            ]);
+        }
+    }
+
+    public function getSubCatBasedOnCat(Request $request){
+
+    }
+
+    public function getProducts(Request $request){
+        $validator = Validator::make($request->all(), [
+            'product_id' => 'nullable|exists:products,id',
+            'filter' => 'nullable'
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $products = Product::select('id', 'title', 'category', 'type', 'media_file', 'thumbnail_image', 'month', 'year', 'description', 'is_featured');
+        if(isset($request->product_id) && $request->product_id != ''){
+            $products = $products->where('id', $request->product_id);
+        }
+
+        if ($request->has('filter') && $request->filter != '') {
+            $filterVal = json_decode($request->filter, true);
+            if (!empty($filterVal)) {
+                $categories = $filterVal['categories'] ?? [];
+                $type = $filterVal['type'] ?? [];
+                $months = $filterVal['months'] ?? [];
+                $months = array_map('strtolower', $months);
+                $years = $filterVal['years'] ?? [];
+                if (!empty($categories)) {
+                    $videos->whereIn('category', $categories);
+                }
+                if (!empty($type)) {
+                    $videos->whereIn('type', $type);
+                }
+                if (!empty($months)) {
+                    $videos->whereIn(DB::raw('LOWER(month)'), $months);
+                }
+                if (!empty($years)) {
+                    $videos->whereIn('year', $years);
+                }
+            }
+        }
+
+        $videos = $videos->get();
+        if(isset($videos) && is_countable($videos) && count($videos) > 0){
+            foreach($videos as $key => $val){
+                $mediaPath = asset('images/video_media_file');
+                $thumbnailPath = asset('images/video_media_file');
+                $val->media_file = $mediaPath.'/'.$val->media_file;
+                $val->thumbnail_image = $thumbnailPath.'/'.$val->thumbnail_image;
+            }
+            return response()->json([
+                'success' => true,
+                'message' => 'Videos are get Successfully',
+                'data' => $videos
+            ]);
+        }else{
+            return response()->json([
+                'success' => false,
+                'message' => 'Videos are not Found',
+            ]);
+        }
+    }
+
+    public function getDetails(Request $request){
+        $data = [];
+        $data['brochure_category'] = $this->formatKeyValue(config('global_values.brochure_category'));
+        $data['post_category'] = $this->formatKeyValue(config('global_values.post_category'));
+        $data['reel_category'] = $this->formatKeyValue(config('global_values.reel_category'));
+        $data['video_category'] = $this->formatKeyValue(config('global_values.video_category'));
+        $data['video_type'] = $this->formatKeyValue(config('global_values.video_type'));
+        $data['user_types'] = config('global_values.user_types');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Details get successful',
+            'data' => $data
+        ]);
+    }
+
+    protected function formatKeyValue($array){
+        $result = [];
+        foreach ($array as $key => $value) {
+            $result[] = [
+                'key' => $key,
+                'value' => $value
+            ];
+        }
+        return $result;
     }
 
 }
