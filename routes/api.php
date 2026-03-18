@@ -37,13 +37,11 @@ Route::middleware('verify.token')->group(function () {
         Route::get('/get-brochures', [UserController::class, 'getBrochures']);
         Route::get('/get-reels', [UserController::class, 'getReels']);
         Route::get('/get-leaflets', [UserController::class, 'getLeaflets']);
-
         Route::get('/get-videos', [UserController::class, 'getVideos']);
         Route::get('/get-products', [UserController::class, 'getproducts']);
-
         
         Route::get('/get-details', [UserController::class, 'getDetails']);
-        Route::get('get-subcategories/{category_id}', [UserController::class, 'getSubCatBasedOnCat']);
+        Route::get('/get-subcategories', [UserController::class, 'getSubCatBasedOnCat']);
 
     });
 
@@ -89,8 +87,11 @@ Route::middleware('auth:distributor-api')->prefix('distributor')->group(function
     // Route::get('/profile', function (Request $request) {
     //     return $request->user(); // distributor info
     // });
-    
-
+    Route::post('add-to-cart', [DistributorController::class, 'addToCart']);
+    Route::get('view-cart', [DistributorController::class, 'viewCart']);
+    Route::post('add-update-address', [DistributorController::class, 'addUpdateAddress']);
+    Route::post('delete-address', [DistributorController::class, 'deleteAddress']);
+    Route::get('get-addresses', [DistributorController::class, 'getAddresses']);
 
     
 }); 

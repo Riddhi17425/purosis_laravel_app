@@ -420,7 +420,32 @@ class UserController extends Controller
     }
 
     public function getSubCatBasedOnCat(Request $request){
+        $validator = Validator::make($request->all(), [
+            'category_ids' => 'required|string'
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
 
+        $categoryIds = explode(',', $request->category_ids);
+        $subcategories = SubCategory::whereIn('category_id', $categoryIds)->get();
+        if(isset($subcategories) && is_countable($subcategories) && count($subcategories) > 0){
+            return response()->json([
+                'success' => true,
+                'message' => 'Sub categories are get Successfully',
+                'data' => $subcategories
+            ]);
+        }else{
+            return response()->json([
+                'success' => false,
+                'message' => 'Sub categories are not Found',
+                'data' => $subcategories
+            ]);
+        }
     }
 
     public function getProducts(Request $request){
@@ -436,51 +461,53 @@ class UserController extends Controller
             ]);
         }
 
-        $products = Product::select('id', 'title', 'category', 'type', 'media_file', 'thumbnail_image', 'month', 'year', 'description', 'is_featured');
+        $products = Product::select('id', 'category_id', 'sub_category_id', 'product_name', 'product_description', 'product_colors_images', 'units_per_box', 'weight_per_box', 'length', 'width', 'height', 'technical_video_url')->with(['category:id,category_name', 'subCategory:id,category_id,sub_category_name']);
+        
         if(isset($request->product_id) && $request->product_id != ''){
             $products = $products->where('id', $request->product_id);
-        }
-
-        if ($request->has('filter') && $request->filter != '') {
+        }else if ($request->has('filter') && $request->filter != '') {
             $filterVal = json_decode($request->filter, true);
             if (!empty($filterVal)) {
                 $categories = $filterVal['categories'] ?? [];
-                $type = $filterVal['type'] ?? [];
-                $months = $filterVal['months'] ?? [];
-                $months = array_map('strtolower', $months);
-                $years = $filterVal['years'] ?? [];
+                $subCategories = $filterVal['sub_categories'] ?? [];
+                //$price = $filterVal['price'] ?? [];
                 if (!empty($categories)) {
-                    $videos->whereIn('category', $categories);
+                    $products->whereIn('category_id', $categories);
                 }
-                if (!empty($type)) {
-                    $videos->whereIn('type', $type);
+                if (!empty($subCategories)) {
+                    $products->whereIn('sub_category_id', $subCategories);
                 }
-                if (!empty($months)) {
-                    $videos->whereIn(DB::raw('LOWER(month)'), $months);
-                }
-                if (!empty($years)) {
-                    $videos->whereIn('year', $years);
-                }
+                // if (!empty($price)) {
+                //     $products->whereIn('price', $price);
+                // }
             }
         }
+        $products = $products->get();
 
-        $videos = $videos->get();
-        if(isset($videos) && is_countable($videos) && count($videos) > 0){
-            foreach($videos as $key => $val){
-                $mediaPath = asset('images/video_media_file');
-                $thumbnailPath = asset('images/video_media_file');
-                $val->media_file = $mediaPath.'/'.$val->media_file;
-                $val->thumbnail_image = $thumbnailPath.'/'.$val->thumbnail_image;
-            }
+        $products = $products->map(function ($product) {
+            $productColors = collect($product->product_colors_images ?? [])->map(function ($img) {
+                return [
+                    'color_name' => $img['color_name'] ?? null,
+                    'color_code' => $img['color_code'] ?? null,
+                    'image' => isset($img['image']) ? url('images/product_images/' . $img['image']) : null
+                ];
+            });
+
+            $product->product_colors_images = $productColors;
+            return $product;
+        });
+        
+        if(isset($products) && is_countable($products) && count($products) > 0){
+           
             return response()->json([
                 'success' => true,
-                'message' => 'Videos are get Successfully',
-                'data' => $videos
+                'message' => 'Products are get Successfully',
+                'data' => $products
             ]);
         }else{
             return response()->json([
                 'success' => false,
-                'message' => 'Videos are not Found',
+                'message' => 'Products are not Found',
             ]);
         }
     }

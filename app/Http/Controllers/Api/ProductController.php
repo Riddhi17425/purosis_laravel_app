@@ -172,6 +172,7 @@ class ProductController extends Controller
             'weight_per_box' => 'required', 
             'product_img' => 'required|array',
             'product_img.*.color_image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'specifications' => 'nullable'
         ], [
             'product_name.required' => 'Please enter the product name.',
             'category_id.required' => 'Please enter the category ID.',
@@ -201,11 +202,12 @@ class ProductController extends Controller
         $product->width = $request->width ?? null;
         $product->height = $request->height ?? null;
         $product->technical_video_url = $request->technical_video_url ?? null;
+        $product->specifications = $request->specifications ? implode(', ',$request->specifications) : null;
         $product->save();
 
         //PRODUCT IMAGES
         $path = public_path('images/product_images');
-        $existingImages = $product->product_colors_images ? json_decode($product->product_colors_images, true) : [];
+        $existingImages = $product->product_colors_images ? $product->product_colors_images : [];
         $productImgArr = [];
         if(isset($request->product_img) && is_countable($request->product_img) && count($request->product_img) > 0){
             // If updating, delete existing images from disk
@@ -259,7 +261,7 @@ class ProductController extends Controller
         }
         $products = Product::query();
         if(isset($request->product_id) && $request->product_id != ''){
-            $products = $products->where('id', $request->product_id)->select('id', 'category_id', 'sub_category_id', 'product_name', 'product_description', 'product_colors_images', 'units_per_box', 'weight_per_box', 'length', 'width', 'height', 'technical_video_url')->with(['category:id,category_name', 'subCategory:id,category_id,sub_category_name'])->get();
+            $products = $products->where('id', $request->product_id)->select('id', 'category_id', 'sub_category_id', 'product_name', 'product_description', 'product_colors_images', 'units_per_box', 'weight_per_box', 'length', 'width', 'height', 'technical_video_url')->with(['category:id,category_name', 'subCategory:id,category_id,sub_category_name', 'specifications'])->get();
             $products = $products->map(function ($product) {
                 $productColors = collect($product->product_colors_images ?? [])->map(function ($img) {
                     return [
@@ -273,7 +275,7 @@ class ProductController extends Controller
                 return $product;
             });
         }else{
-            $products = $products->select('id', 'product_name', 'product_description');
+            $products = $products->select('id', 'product_name', 'product_description', 'specifications');
             if (isset($request->search)) {
                 $search = $request->search;
                 $products = $products->where(function ($query) use ($search) {
@@ -291,7 +293,7 @@ class ProductController extends Controller
         
         if(isset($products) && is_countable($products) && count($products) > 0){
             foreach($products as $key => $val){
-                
+                $val->specifications = explode(', ', $val->specifications);
             }
             return response()->json([
                 'success' => true,

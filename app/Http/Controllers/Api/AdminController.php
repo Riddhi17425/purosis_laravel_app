@@ -88,6 +88,7 @@ class AdminController extends Controller
         ],);
 
         $admin->token = $token;
+        $admin->role = 'admin';
 
         return response()->json([
             'success' => true,
@@ -173,13 +174,21 @@ class AdminController extends Controller
             'distributor_id' => 'nullable|exists:distributors,id',
             'name' => 'required',
             'email' => 'required|email',
-            'phone_no' => 'required|digits_between:10,15',
+            //'phone_no' => 'required|digits_between:10,15',
             'whatsapp_no' => 'required|digits_between:10,15',
             'gst_number' => 'nullable',
             'area' => 'nullable|string',
             'billing_address' => 'required',
             'shipping_address_line' => 'required',
             'shipping_address_pincode' => 'required',
+            'phone_no' => [
+                'required',
+                'digits_between:10,15',
+                Rule::unique('distributors', 'phone_no')->when(
+                    !$request->filled('distributor_id'),
+                    fn ($query) => $query
+                ),
+            ],
         ], [
             'name.required' => 'The name field is required.',
             'email.required' => 'The email field is required.',
