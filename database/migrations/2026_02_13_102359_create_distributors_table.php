@@ -14,8 +14,11 @@ return new class extends Migration
         Schema::create('distributors', function (Blueprint $table) {
             $table->id();
             $table->string('name')->nullable();
+            $table->string('company_name')->nullable();
             $table->string('email')->nullable();
             $table->string('phone_no', 20);
+            $table->string('alternate_mobile_no', 20)->nullable();
+            $table->string('landline_no')->nullable();
             $table->string('whatsapp_no', 20)->nullable();
             $table->integer('otp')->nullable();
             $table->timestamp('otp_expires_at')->nullable();
@@ -24,6 +27,7 @@ return new class extends Migration
             $table->string('billing_address')->nullable();
             $table->string('shipping_address_line')->nullable();
             $table->string('shipping_address_pincode')->nullable();
+            $table->string('logo')->nullable();
             $table->tinyInteger('is_active')->default(0)->comment('0 = Inactive, 1 = Active');
             $table->timestamps();
         });

@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('address')->nullable();
             $table->string('state')->nullable();
             $table->string('city')->nullable();
+            $table->string('pincode', 10)->nullable();
             $table->string('mobile_no')->nullable();
             $table->string('email_address')->nullable();
             $table->tinyInteger('is_shipping')->default(0)->comment("0 = Billing, 1 = Shipping");

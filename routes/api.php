@@ -66,10 +66,8 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
     Route::get('get-videos', [MarketingController::class, 'getVideos']);
     Route::post('add-update-leaflet', [MarketingController::class, 'addUpdateLeaflet']);
     Route::get('get-leaflets', [MarketingController::class, 'getLeaflets']);
-
     Route::post('add-update-post', [PostController::class, 'addUpdatePost']);
     Route::get('get-posts', [PostController::class, 'getPosts']);
-
     Route::post('add-update-reel', [ReelController::class, 'addUpdateReel']);
     Route::get('get-reels', [ReelController::class, 'getReels']);
 
@@ -84,14 +82,16 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
 
 // DISTRIBUTOR
 Route::middleware('auth:distributor-api')->prefix('distributor')->group(function () {
-    // Route::get('/profile', function (Request $request) {
-    //     return $request->user(); // distributor info
-    // });
     Route::post('add-to-cart', [DistributorController::class, 'addToCart']);
     Route::get('view-cart', [DistributorController::class, 'viewCart']);
+    Route::post('place-order', [DistributorController::class, 'proceedToCheckout']);
+    Route::get('order-history', [DistributorController::class, 'orderHistory']);
+    Route::get('order-details', [DistributorController::class, 'orderDetails']);
+
     Route::post('add-update-address', [DistributorController::class, 'addUpdateAddress']);
     Route::post('delete-address', [DistributorController::class, 'deleteAddress']);
     Route::get('get-addresses', [DistributorController::class, 'getAddresses']);
+    Route::post('update-profile', [DistributorController::class, 'updateProfile']);
 
     
 }); 

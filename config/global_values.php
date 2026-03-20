@@ -7,4 +7,5 @@ return [
     'video_type' => ['videotype1' => 'Video Type 1'],
     'leaflet_category' => ['leaflet1' => 'Leaflet 1'],
     'user_types' => ['admin', 'distributor', 'dealer'],
+    'transportation_types' => ['Full Container', 'Part Loader'],
 ];

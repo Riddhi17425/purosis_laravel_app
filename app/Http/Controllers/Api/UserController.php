@@ -461,7 +461,7 @@ class UserController extends Controller
             ]);
         }
 
-        $products = Product::select('id', 'category_id', 'sub_category_id', 'product_name', 'product_description', 'product_colors_images', 'units_per_box', 'weight_per_box', 'length', 'width', 'height', 'technical_video_url')->with(['category:id,category_name', 'subCategory:id,category_id,sub_category_name']);
+        $products = Product::select('id', 'category_id', 'sub_category_id', 'product_name', 'product_description', 'product_colors_images', 'units_per_box', 'weight_per_box', 'length', 'width', 'height', 'technical_video_url', 'specifications')->with(['category:id,category_name', 'subCategory:id,category_id,sub_category_name']);
         
         if(isset($request->product_id) && $request->product_id != ''){
             $products = $products->where('id', $request->product_id);
@@ -483,22 +483,46 @@ class UserController extends Controller
             }
         }
         $products = $products->get();
+        // $products = $products->map(function ($product) {
+        //     $productColors = collect($product->product_colors_images ?? [])->map(function ($img) {
+        //         return [
+        //             'color_name' => $img['color_name'] ?? null,
+        //             'color_code' => $img['color_code'] ?? null,
+        //             'image' => isset($img['image']) ? url('images/product_images/' . $img['image']) : null
+        //         ];
+        //     });
 
+        //     $product->product_colors_images = $productColors;
+        //     return $product;
+        // });
         $products = $products->map(function ($product) {
             $productColors = collect($product->product_colors_images ?? [])->map(function ($img) {
+                $images = [];
+                if (!empty($img['images'])) {
+                    // If already array
+                    if (is_array($img['images'])) {
+                        $images = collect($img['images'])->map(function ($image) {
+                            return url('images/product_images/' . $image);
+                        })->toArray();
+                    } else {
+                        // If single image (backward compatibility)
+                        $images[] = url('images/product_images/' . $img['images']);
+                    }
+                }
                 return [
                     'color_name' => $img['color_name'] ?? null,
                     'color_code' => $img['color_code'] ?? null,
-                    'image' => isset($img['image']) ? url('images/product_images/' . $img['image']) : null
+                    'images' => $images
                 ];
             });
-
             $product->product_colors_images = $productColors;
             return $product;
         });
         
         if(isset($products) && is_countable($products) && count($products) > 0){
-           
+            foreach($products as $key => $val){
+                $val->specifications = explode(', ', $val->specifications);
+            }
             return response()->json([
                 'success' => true,
                 'message' => 'Products are get Successfully',

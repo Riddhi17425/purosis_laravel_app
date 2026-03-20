@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\{Cart, Product, Address};
+use App\Models\{Cart, Product, Address, Order, OrderProduct};
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -46,9 +46,9 @@ class DistributorController extends Controller
         }
         $checkCart->save();
 
-        $checkCart->total_weight = $product->weight_per_box * $checkCart->qty ?? null;
-        $cbm = $product->length * $product->width *	$product->height;
-        $checkCart->total_cbm = $cbm * $checkCart->qty;
+        $checkCart->total_weight = ($product->weight_per_box ?? 0) * ($checkCart->qty ?? 0);
+        $cbm = ($product->length ?? 0) * ($product->width ?? 0) * ($product->height ?? 0);
+        $checkCart->total_cbm = $cbm * ($checkCart->qty ?? 0);
         $checkCart->save();
 
         return response()->json([
@@ -84,9 +84,11 @@ class DistributorController extends Controller
             'address' => 'required|string|max:500',
             'state' => 'required|string|max:255',
             'city' => 'required|string|max:255',
+            'pincode' => 'required|max:10',
             'mobile_no' => 'required|digits_between:10,15',
             'email_address' => 'required|email|max:255',
             'is_shipping' => 'required|in:0,1',
+            'shipping_address' => 'required_if:is_shipping,1',
         ],[
             'dealer_name.string' => 'Dealer name must be a valid string.',
             'dealer_name.max' => 'Dealer name cannot exceed 255 characters.',
@@ -98,11 +100,14 @@ class DistributorController extends Controller
             'state.max' => 'State cannot exceed 255 characters.',
             'city.string' => 'City must be a valid string.',
             'city.max' => 'City cannot exceed 255 characters.',
+            'pincode.required' => 'The pincode field is required.',
+            'pincode.max' => 'The pincode must not exceed 10 characters.',
             'mobile_no.digits_between' => 'Mobile number must be between 10 and 15 digits.',
             'email_address.email' => 'Please enter a valid email address.',
             'email_address.max' => 'Email address cannot exceed 255 characters.',
             'is_shipping.required' => 'Please select address type.',
             'is_shipping.in' => 'Address type must be Billing or Shipping.',
+            'shipping_address.required_if' => 'Shipping address is required',
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -112,29 +117,85 @@ class DistributorController extends Controller
             ]);
         }
 
-        $address = Address::updateOrCreate(
-            [
-                'id' => $request->address_id
-            ],
-            [
-                'dealer_name' => $request->dealer_name,
-                'contact_person_name' => $request->contact_person_name,
-                'gst_number' => $request->gst_number,
-                'address' => $request->address,
-                'state' => $request->state,
-                'city' => $request->city,
-                'mobile_no' => $request->mobile_no,
-                'email_address' => $request->email_address,
-                'is_shipping' => $request->is_shipping,
-                'distributor_id' => Auth::guard('distributor-api')->id()
-            ]
-        );
+        $distributorId = Auth::guard('distributor-api')->id();
+        // Common data
+        $commonData = [
+            'dealer_name' => $request->dealer_name,
+            'contact_person_name' => $request->contact_person_name,
+            'gst_number' => $request->gst_number,
+            'state' => $request->state,
+            'city' => $request->city,
+            'pincode' => $request->pincode,
+            'mobile_no' => $request->mobile_no,
+            'email_address' => $request->email_address,
+            'distributor_id' => $distributorId,
+        ];
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Address stored Successfully',
-            'data' => $address
-        ]);
+        // If is_shipping = 0 → create both billing and shipping entries with the same address
+        // If is_shipping = 1 → create separate billing and shipping entries (shipping_address will be used for shipping)
+
+        // // Billing Address
+        // $billing = Address::create(array_merge($commonData, [
+        //     'address' => $request->address,
+        //     'is_shipping' => 0,
+        // ]));
+
+        // // Shipping Address (same or different)
+        $shippingAddress = $request->is_shipping == 1 
+            ? $request->shipping_address 
+            : $request->address;
+
+        // $shipping = Address::create(array_merge($commonData, [
+        //     'address' => $shippingAddress,
+        //     'is_shipping' => 1,
+        // ]));
+
+        // ================= UPDATE =================
+        if ($request->address_id) {
+            $address = Address::where('id', $request->address_id)
+                ->where('distributor_id', $distributorId)
+                ->first();
+
+            if (!$address) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Address not found'
+                ]);
+            }
+        
+            $address->update(array_merge($commonData, [
+                'address' => $shippingAddress,
+            ]));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Address stored Successfully',
+                'data' => [
+                    'address' => $address,
+                ]
+            ]);
+            
+        } 
+        // ================= CREATE =================
+        else {
+            $billing = Address::create(array_merge($commonData, [
+                'address' => $request->address,
+                'is_shipping' => 0,
+            ]));
+
+            $shipping = Address::create(array_merge($commonData, [
+                'address' => $shippingAddress,
+                'is_shipping' => 1,
+            ]));
+            return response()->json([
+                'success' => true,
+                'message' => 'Address stored Successfully',
+                'data' => [
+                    'billing' => $billing,
+                    'shipping' => $shipping
+                ]
+            ]);
+        }
     }
 
     public function deleteAddress(Request $request){
@@ -178,6 +239,276 @@ class DistributorController extends Controller
                 'message' => 'No any Addresses are Found',
             ]);
         }
+    }
+
+    public function updateProfile(Request $request){
+        $user = Auth::guard('distributor-api')->user();
+        $validator = Validator::make($request->all(), [
+            'company_name' => 'required|string|max:255',
+            'contact_person_name' => 'required|string|max:255',
+            'gst_number' => 'required|string|max:50',
+            'area' => 'nullable|string|max:255',
+            'mobile_no' => 'required|digits_between:10,15',
+            'alternate_mobile_no' => 'nullable|digits_between:10,15',
+            'landline_no' => 'nullable|string|max:20',
+            'email' => 'required|email|max:255',
+            'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+        ], [
+            'company_name.required' => 'Company name is required.',
+            'contact_person_name.required' => 'Contact person name is required.',
+            'gst_number.required' => 'GST number is required.',
+            'mobile_no.required' => 'Mobile number is required.',
+            'mobile_no.digits_between' => 'Mobile number must be between 10 and 15 digits.',
+            'email.required' => 'Email is required.',
+            'email.email' => 'Please enter a valid email address.',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ]);
+        }
+        
+        $data = [
+            'company_name' => $request->company_name,
+            'name' => $request->contact_person_name,
+            'gst_number' => $request->gst_number,
+            'area' => $request->area,
+            'phone_no' => $request->mobile_no,
+            'alternate_mobile_no' => $request->alternate_mobile_no,
+            'landline_no' => $request->landline_no,
+            'email' => $request->email,
+        ];
+
+        $path = public_path('images/profile');
+        if ($request->hasFile('logo')) {
+            $file = $request->file('logo');
+            $filename = $user->id.'_'.time() . '_' . $file->getClientOriginalName();
+            $file->move($path, $filename);
+            $data['logo'] = $filename;
+        }
+        $user->update($data);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile updated successfully',
+            'data' => $user
+        ]);
+    }
+
+    public function proceedToCheckout(Request $request){
+        $distributorId = Auth::guard('distributor-api')->id();
+        $transportationTypes = config('global_values.transportation_types');
+
+        // Determine if it's a Buy Now (direct) or Cart-based checkout
+        $isBuyNow = $request->filled('product_id');
+        $rules = [
+            'billing_address_id'  => 'required|exists:addresses,id',
+            'shipping_address_id' => 'required|exists:addresses,id',
+            'type'                => 'required|in:' . implode(',', $transportationTypes),
+            'remarks'             => 'nullable|max:255',
+        ];
+
+        // Extra validation for Buy Now
+        if ($isBuyNow) {
+            $rules['product_id']  = 'required|exists:products,id';
+            $rules['qty']         = 'required|integer|min:1';
+            $rules['color_code']  = 'required|string';
+        } else {
+            // Allow selecting specific cart items; if omitted, all cart items are used
+            $rules['cart_ids']   = 'nullable|array|min:1';
+            $rules['cart_ids.*'] = 'integer|exists:carts,id';
+        }
+        $validator = Validator::make($request->all(), $rules, [
+            'billing_address_id.required'  => 'Billing address is required.',
+            'shipping_address_id.required' => 'Shipping address is required.',
+            'type.required'                => 'Transportation type is required.',
+            'type.in'                      => 'Invalid transportation type.',
+            'remarks.max'                  => 'Remarks cannot exceed 255 characters.',
+            'product_id.required'          => 'Product is required for Buy Now.',
+            'qty.required'                 => 'Quantity is required for Buy Now.',
+            'color_code.required'          => 'Color code is required for Buy Now.',
+            'cart_ids.array'               => 'cart_ids must be an array.',
+            'cart_ids.min'                 => 'Please select at least one cart item.',
+            'cart_ids.*.exists'            => 'One or more selected cart items are invalid.',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors'  => $validator->errors()
+            ]);
+        }
+
+        // Build the items to insert into order_products
+        if ($isBuyNow) {
+            $product = Product::find($request->product_id);
+            $qty     = (int) $request->qty;
+            $cbm     = ($product->length ?? 0) * ($product->width ?? 0) * ($product->height ?? 0);
+
+            $items = [[
+                'product_id'     => $product->id,
+                'qty'            => $qty,
+                'color_code'     => $request->color_code,
+                'price'          => $product->price ?? null,
+                'units_per_box'  => $product->units_per_box ?? null,
+                'weight_per_box' => $product->weight_per_box ?? null,
+                'total_weight'   => ($product->weight_per_box ?? 0) * $qty,
+                'total_cbm'      => $cbm * $qty,
+            ]];
+        } else {
+            $cartQuery = Cart::where('distributor_id', $distributorId);
+
+            // If specific cart_ids are provided, filter to only those items
+            if ($request->filled('cart_ids')) {
+                $cartQuery->whereIn('id', $request->cart_ids);
+            }
+
+            $cartItems = $cartQuery->get();
+
+            if ($cartItems->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No selected cart items found. Please select at least one product.',
+                ]);
+            }
+
+            $items = $cartItems->map(fn($c) => [
+                'product_id'     => $c->product_id,
+                'qty'            => $c->qty,
+                'color_code'     => $c->color_code,
+                'price'          => $c->price,
+                'units_per_box'  => $c->units_per_box,
+                'weight_per_box' => $c->weight_per_box,
+                'total_weight'   => $c->total_weight,
+                'total_cbm'      => $c->total_cbm,
+            ])->toArray();
+        }
+
+        // Calculate order totals
+        $totalWeight = array_sum(array_column($items, 'total_weight'));
+        $totalCbm    = array_sum(array_column($items, 'total_cbm'));
+
+        // Create the order
+        $order = Order::create([
+            'distributor_id'      => $distributorId,
+            'billing_address_id'  => $request->billing_address_id,
+            'shipping_address_id' => $request->shipping_address_id,
+            'type'                => $request->type,
+            'remarks'             => $request->remarks ?? null,
+            'total_weight'        => $totalWeight,
+            'total_cbm'           => $totalCbm,
+            'status'              => 'confirmed',
+        ]);
+
+        // Insert order products
+        $now = now();
+        $orderProducts = array_map(fn($item) => array_merge($item, [
+            'order_id'   => $order->id,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]), $items);
+
+        OrderProduct::insert($orderProducts);
+
+        // Clear cart (only for cart-based checkout)
+        if (!$isBuyNow) {
+            $deleteQuery = Cart::where('distributor_id', $distributorId);
+            if ($request->filled('cart_ids')) {
+                $deleteQuery->whereIn('id', $request->cart_ids);
+            }
+            $deleteQuery->delete();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Order placed successfully.',
+            'data'    => $order->load('orderProducts'),
+        ]);
+    }
+
+    public function orderHistory(Request $request){
+        $validator = Validator::make($request->all(), [
+            'sort_by' => 'nullable|in:latest,oldest',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ]);
+        }
+
+        $distributorId = Auth::guard('distributor-api')->id();
+
+        // Summary counts
+        $allOrders = Order::where('distributor_id', $distributorId);
+        $summary = [
+            'total_orders' => (clone $allOrders)->count(),
+            'pending'      => (clone $allOrders)->where('shipping_status', 'pending')->count(),
+            'confirm'      => (clone $allOrders)->where('shipping_status', 'confirmed')->count(),
+            'failed'       => (clone $allOrders)->where('shipping_status', 'failed')->count(),
+        ];
+
+        // Build query
+        $sortOrder = $request->sort_by === 'oldest' ? 'asc' : 'desc';
+
+        $orders = Order::select('id', 'order_number', 'total_weight', 'shipping_status', 'created_at')
+            ->where('distributor_id', $distributorId)
+            ->withCount('orderProducts')
+            ->orderBy('id', $sortOrder)
+            ->get();
+
+        if ($orders->isNotEmpty()) {
+            $orders->transform(function ($order) {
+                $order->order_date = $order->created_at->format('M d, Y • h:i A');
+                return $order;
+            });
+            $orders->makeHidden(['created_at']);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Order history get Successfully',
+            'data' => [
+                'summary' => $summary,
+                'orders'  => $orders,
+            ],
+        ]);
+    }
+
+    public function orderDetails(Request $request){
+        $validator = Validator::make($request->all(), [
+            'order_id' => 'required|exists:orders,id',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ]);
+        }
+
+        $distributorId = Auth::guard('distributor-api')->id();
+        $order = Order::select('id', 'order_number', 'shipping_status', 'created_at')
+            ->where('id', $request->order_id)
+            ->where('distributor_id', $distributorId)
+            ->with(['orderProducts:id,order_id,product_id,qty,color_code,price,total_weight,total_cbm', 'orderProducts.product:id,product_name,units_per_box,weight_per_box'])
+            ->first();
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found.',
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Order details get Successfully',
+            'data' => $order,
+        ]);
     }
    
 }
