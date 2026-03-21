@@ -544,6 +544,7 @@ class UserController extends Controller
         $data['video_category'] = $this->formatKeyValue(config('global_values.video_category'));
         $data['video_type'] = $this->formatKeyValue(config('global_values.video_type'));
         $data['user_types'] = config('global_values.user_types');
+        $data['shipping_status'] = $this->formatKeyValue(config('global_values.shipping_status'));
 
         return response()->json([
             'success' => true,

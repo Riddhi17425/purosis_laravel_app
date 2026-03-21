@@ -50,6 +50,10 @@ Route::middleware('verify.token')->group(function () {
 //ADMIN
 Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
 
+    Route::get('get-dashboard-data', [AdminController::class, 'getDashboardData']);
+    Route::get('order-history', [AdminController::class, 'orderHistory']);
+    Route::get('order-details', [AdminController::class, 'orderDetails']);
+
     Route::post('add-update-profile', [AdminController::class, 'addUpdateProfile']);
     Route::get('get-profiles', [AdminController::class, 'getProfiles']);
 
@@ -87,20 +91,16 @@ Route::middleware('auth:distributor-api')->prefix('distributor')->group(function
     Route::post('place-order', [DistributorController::class, 'proceedToCheckout']);
     Route::get('order-history', [DistributorController::class, 'orderHistory']);
     Route::get('order-details', [DistributorController::class, 'orderDetails']);
-
     Route::post('add-update-address', [DistributorController::class, 'addUpdateAddress']);
     Route::post('delete-address', [DistributorController::class, 'deleteAddress']);
     Route::get('get-addresses', [DistributorController::class, 'getAddresses']);
     Route::post('update-profile', [DistributorController::class, 'updateProfile']);
 
-    
 }); 
 
 // DEALER
 Route::middleware('auth:dealer-api')->prefix('dealer')->group(function () {
-    // Route::get('/profile', function (Request $request) {
-    //     return $request->user(); // dealer info
-    // });
+    Route::post('update-profile', [DealerController::class, 'updateProfile']);
 
 });
 

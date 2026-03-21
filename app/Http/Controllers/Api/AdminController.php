@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{Admin, Distributor};
+use App\Models\{Admin, Distributor, Order, Product, Brochure, Video, Leaflet, Post, Reel, Dealer};
 
 class AdminController extends Controller
 {
@@ -272,8 +272,114 @@ class AdminController extends Controller
             return response()->json(['success' => true, 'message' => 'Distributor get Successfully', 'data' => $distributor]);
         }else{
             return response()->json(['success' => false, 'message' => 'Distributor not Found']);
-        }            
+        }               
+    }
+
+    public function getDashboardData(Request $request){
+        $confirmedOrders = Order::where('status', 'confirmed')->count();
+        $totalOrders = Order::count();
+        $totalDistributors = Distributor::count();
+        $totalDealers = Dealer::count();
+        $totalProducts = Product::count();
+
+        $totalBrochures = Brochure::count();
+        $totalVideos = Video::count();
+        $totalLeaflets = Leaflet::count();
+        $totalPosts = Post::count();
+        $totalReels = Reel::count();
+        $marketingAssets = $totalBrochures + $totalVideos + $totalLeaflets + $totalPosts + $totalReels;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Dashboard data retrieved successfully',
+            'data' => [
+                'confirmed_orders' => $confirmedOrders,
+                'total_orders' => $totalOrders,
+                'total_distributors' => $totalDistributors,
+                'total_dealers' => $totalDealers,
+                'total_products' => $totalProducts,
+                'marketing_assets' => $marketingAssets,
+                
+            ]
+        ]);
+    }
+
+    public function orderHistory(Request $request){
+        $shippingStatuses = config('global_values.shipping_status');
+        $validator = Validator::make($request->all(), [
+            'sort_by' => 'nullable|in:latest,oldest',
+            'shipping_status' => 'nullable|in:all,' . implode(',', array_keys($shippingStatuses))
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ]);
+        }
+
+        $sortOrder = $request->sort_by === 'oldest' ? 'asc' : 'desc';
+        $orders = Order::select('id', 'order_number', 'total_weight', 'shipping_status', 'created_at')
+            ->withCount('orderProducts')
+            ->with(['orderProducts' => function     ($query) {
+                $query->select('id', 'order_id', 'product_id')
+                    ->with('product:id,product_name');
+            }])->orderBy('id', $sortOrder);
+
+        if ($request->shipping_status && $request->shipping_status != 'all') {
+            $orders = $orders->where('shipping_status', $request->shipping_status);
+        }
+        $orders = $orders->get();
+
+        if ($orders->isNotEmpty()) {
+            $orders->transform(function ($order) {
+                $order->order_date = $order->created_at->format('M d, Y • h:i A');
+                return $order;
+            });
+            $orders->makeHidden(['created_at']);
+        }else{
+            return response()->json([
+                'success' => false,
+                'message' => 'No orders found.',
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Order history get Successfully',
+            'data' => $orders,
+        ]);
+    }
+
+     public function orderDetails(Request $request){
+        $validator = Validator::make($request->all(), [
+            'order_id' => 'required|exists:orders,id',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ]);
+        }
         
+        $order = Order::select('id', 'order_number', 'shipping_status', 'created_at')
+            ->where('id', $request->order_id)
+            ->with(['orderProducts:id,order_id,product_id,qty,color_code,price,total_weight,total_cbm', 'orderProducts.product:id,product_name,units_per_box,weight_per_box'])
+            ->first();
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found.',
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Order details get Successfully',
+            'data' => $order,
+        ]);
     }
 
 

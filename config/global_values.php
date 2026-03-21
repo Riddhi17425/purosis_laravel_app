@@ -8,4 +8,5 @@ return [
     'leaflet_category' => ['leaflet1' => 'Leaflet 1'],
     'user_types' => ['admin', 'distributor', 'dealer'],
     'transportation_types' => ['Full Container', 'Part Loader'],
+    'shipping_status' => ['pending' => 'Pending', 'confirmed' => 'Confirmed', 'in-process' => 'In Process', 'delivered' => 'Delivered', 'cancelled' => 'Cancelled'],
 ];
