@@ -44,7 +44,6 @@ class DistributorController extends Controller
             $checkCart->units_per_box = $product->units_per_box ?? null;
             $checkCart->weight_per_box = $product->weight_per_box ?? null;
         }
-        $checkCart->save();
 
         $checkCart->total_weight = ($product->weight_per_box ?? 0) * ($checkCart->qty ?? 0);
         $cbm = ($product->length ?? 0) * ($product->width ?? 0) * ($product->height ?? 0);
@@ -59,9 +58,35 @@ class DistributorController extends Controller
     }
 
     public function viewCart(Request $request){
-        $cart = Cart::where('distributor_id', Auth::guard('distributor-api')->id())->get();
+        $cart = Cart::with('product:id,product_name,product_colors_images')->where('distributor_id', Auth::guard('distributor-api')->id())->get();
 
         if(isset($cart) && is_countable($cart) && count($cart) > 0){
+
+            $cart = $cart->map(function ($cartItem) {
+                if ($cartItem->product) {
+                    $product = $cartItem->product;
+                    $productColors = collect($product->product_colors_images ?? [])->map(function ($img) {
+                        $images = [];
+                        if (!empty($img['images'])) {
+                            if (is_array($img['images'])) {
+                                $images = collect($img['images'])->map(function ($image) {
+                                    return url('images/product_images/' . $image);
+                                })->toArray();
+                            } else {
+                                $images[] = url('images/product_images/' . $img['images']);
+                            }
+                        }
+                        return [
+                            'color_name' => $img['color_name'] ?? null,
+                            'color_code' => $img['color_code'] ?? null,
+                            'images'     => $images,
+                        ];
+                    });
+                    $product->product_colors_images = $productColors;
+                }
+                return $cartItem;
+            });
+
             return response()->json([
                 'success' => true,
                 'message' => 'Cart details are get Successfully',
@@ -290,6 +315,10 @@ class DistributorController extends Controller
         }
         $user->update($data);
 
+        if($user->logo){
+            $user->logo = asset('images/profile/'.$user->logo);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Profile updated successfully',
@@ -459,7 +488,7 @@ class DistributorController extends Controller
             ->withCount('orderProducts')
             ->orderBy('id', $sortOrder)
             ->get();
-
+    
         if ($orders->isNotEmpty()) {
             $orders->transform(function ($order) {
                 $order->order_date = $order->created_at->format('M d, Y • h:i A');

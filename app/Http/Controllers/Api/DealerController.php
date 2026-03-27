@@ -48,6 +48,10 @@ class DealerController extends Controller
         }
         $user->update($data);
 
+        if($user->logo){
+            $user->logo = asset('images/dealer_profile/'.$user->logo);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Profile updated successfully',
