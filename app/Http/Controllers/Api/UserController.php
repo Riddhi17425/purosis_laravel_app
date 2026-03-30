@@ -117,6 +117,10 @@ class UserController extends Controller
         $user->token = $token;
         $user->role = $request->user_type;
 
+        if($user->logo){
+            $user->logo = asset('images/profile/'.$user->logo);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Login successful',

@@ -6,7 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{Admin, Distributor, Order, Product, Brochure, Video, Leaflet, Post, Reel, Dealer};
+use App\Models\{Admin, Distributor, Order, Product, Brochure, Video, Leaflet, Post, Reel, Dealer, Setting};
+use Auth;
 
 class AdminController extends Controller
 {
@@ -97,18 +98,17 @@ class AdminController extends Controller
         ]);
     }
     
-    public function addUpdateProfile(Request $request){
+    public function updateProfile(Request $request){
         $profileCategories = config('global_values.profile_category');
         $validator = Validator::make($request->all(), [
-            'admin_id' => 'nullable|exists:admins,id',
             'name' => 'required',
-            'phone_no' => 'required',
+            // 'phone_no' => 'required',
             'email' => 'required',
+            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ], [
-            'admin_id.exists' => 'The selected admin is invalid.',
             'name.required' => 'The name field is required.',
-            'phone_no.required' => 'The mobile field is required.',
-            'phone_no.digits_between' => 'Mobile number must be between 10 and 15 digits.',
+            // 'phone_no.required' => 'The mobile field is required.',
+            // 'phone_no.digits_between' => 'Mobile number must be between 10 and 15 digits.',
             'email.required' => 'The email field is required.',
             'email.email' => 'Please enter a valid email address.'
         ]);
@@ -120,14 +120,17 @@ class AdminController extends Controller
             ]);
         }
 
-        if ($request->admin_id) {
-            $profile = Admin::find($request->admin_id);
-        } else {
-            $profile = new Admin();
-        }
+        $adminId = Auth::guard('admin-api')->id();
+        $profile = Admin::find($adminId);
         $profile->name = $request->name ?? null;
-        $profile->phone_no = $request->phone_no ?? null;
+        // $profile->phone_no = $request->phone_no ?? null;
         $profile->email = $request->email ?? null;
+        if($request->hasFile('profile_photo')){
+            $file = $request->file('profile_photo');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $file->move(public_path('images/admin_profile_photos'), $filename);
+            $profile->profile_photo = $filename;
+        }
         $profile->save();
 
         return response()->json([
@@ -137,34 +140,21 @@ class AdminController extends Controller
         ]);
     }
 
-    public function getProfiles(Request $request){
-        $validator = Validator::make($request->all(), [
-            'admin_id' => 'nullable|exists:admins,id',
-        ]);
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed.',
-                'errors' => $validator->errors(),
-            ]);
-        }
+    public function getProfile(Request $request){
+        $adminId = Auth::guard('admin-api')->id();
+        $profile = Admin::select('id', 'name', 'phone_no', 'email', 'profile_photo')->where('id', $adminId)->first();
 
-        $profiles = Admin::select('id', 'name', 'phone_no', 'email');
-        if(isset($request->admin_id) && $request->admin_id != ''){
-            $profiles = $profiles->where('id', $request->admin_id);
-        }
-        $profiles = $profiles->get();
-        if(isset($profiles) && is_countable($profiles) && count($profiles) > 0){
-            
+        if(isset($profile) && $profile != ''){
+            $profile->profile_photo = isset($profile->profile_photo) ? url('images/admin_profile_photos/' . $profile->profile_photo) : null;
             return response()->json([
                 'success' => true,
-                'message' => 'Profiles get Successfully',
-                'data' => $profiles
+                'message' => 'Profile data retrieved Successfully',
+                'data' => $profile
             ]);
         }else{
             return response()->json([
                 'success' => false,
-                'message' => 'Profiles are not Found',
+                'message' => 'Profile data are not Found',
             ]);
         }
     }
@@ -365,7 +355,7 @@ class AdminController extends Controller
         
         $order = Order::select('id', 'order_number', 'shipping_status', 'created_at')
             ->where('id', $request->order_id)
-            ->with(['orderProducts:id,order_id,product_id,qty,color_code,price,total_weight,total_cbm', 'orderProducts.product:id,product_name,units_per_box,weight_per_box'])
+            ->with(['orderProducts:id,order_id,product_id,qty,color_code,price,total_weight,total_cbm', 'orderProducts.product:id,product_name,units_per_box,weight_per_box,product_colors_images'])
             ->first();
 
         if (!$order) {
@@ -375,10 +365,68 @@ class AdminController extends Controller
             ]);
         }
 
+        $data = $order->toArray();
+        foreach ($data['order_products'] as $opIndex => $op) {
+            foreach ($op['product']['product_colors_images'] ?? [] as $imgIndex => $img) {
+                $data['order_products'][$opIndex]['product']['product_colors_images'][$imgIndex]['images'] = array_map(
+                    fn($i) => url('images/product_images/' . $i),
+                    $img['images'] ?? []
+                );
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Order details get Successfully',
-            'data' => $order,
+            'data'    => $data,
+        ]);
+    }
+
+    public function updateSupportDetails(Request $request){
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'phone_no' => 'required|digits_between:10,15',
+            'office_timings' => 'required|string',
+            'note' => 'required|string',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ]);
+        }
+
+        $setting = Setting::first(); // Get the first record (you can modify this as needed)
+        if (!$setting) {
+            $setting = new Setting();
+        }
+        $setting->email = $request->email ?? null;
+        $setting->phone_no = $request->phone_no ?? null;
+        $setting->office_timings = $request->office_timings ?? null;
+        $setting->note = $request->note ?? null;
+        $setting->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Support details updated successfully',
+            'data' => $setting
+        ]);
+    }
+
+    public function getSupportDetails(Request $request){
+        $setting = Setting::first(); // Get the first record (you can modify this as needed)
+        if (!$setting) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Support details not found.',
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Support details retrieved successfully',
+            'data' => $setting
         ]);
     }
 

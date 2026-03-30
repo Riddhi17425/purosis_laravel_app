@@ -32,18 +32,18 @@ class DistributorController extends Controller
 
         $checkCart = Cart::where('product_id', $request->product_id)->where('distributor_id', Auth::guard('distributor-api')->id())->first();
         $product = Product::where('id', $request->product_id)->first();
-        if($checkCart){
-            $checkCart->qty += $request->qty;
-        }else{
+        if(!$checkCart){
             $checkCart = new Cart();
-            $checkCart->distributor_id = Auth::guard('distributor-api')->id();
-            $checkCart->product_id = $request->product_id ?? null;
-            $checkCart->qty = $request->qty ?? null;
-            $checkCart->color_code = $request->color_code ?? null;
-            //$checkCart->price = $request->product_id ?? null;
-            $checkCart->units_per_box = $product->units_per_box ?? null;
-            $checkCart->weight_per_box = $product->weight_per_box ?? null;
         }
+            
+        $checkCart->qty += $request->qty;
+        $checkCart->distributor_id = Auth::guard('distributor-api')->id();
+        $checkCart->product_id = $request->product_id ?? null;
+        $checkCart->qty = $request->qty ?? null;
+        $checkCart->color_code = $request->color_code ?? null;
+        //$checkCart->price = $request->product_id ?? null;
+        $checkCart->units_per_box = $product->units_per_box ?? null;
+        $checkCart->weight_per_box = $product->weight_per_box ?? null;
 
         $checkCart->total_weight = ($product->weight_per_box ?? 0) * ($checkCart->qty ?? 0);
         $cbm = ($product->length ?? 0) * ($product->width ?? 0) * ($product->height ?? 0);
@@ -523,7 +523,7 @@ class DistributorController extends Controller
         $order = Order::select('id', 'order_number', 'shipping_status', 'created_at')
             ->where('id', $request->order_id)
             ->where('distributor_id', $distributorId)
-            ->with(['orderProducts:id,order_id,product_id,qty,color_code,price,total_weight,total_cbm', 'orderProducts.product:id,product_name,units_per_box,weight_per_box'])
+            ->with(['orderProducts:id,order_id,product_id,qty,color_code,price,total_weight,total_cbm', 'orderProducts.product:id,product_name,units_per_box,weight_per_box,product_colors_images'])
             ->first();
 
         if (!$order) {
@@ -531,6 +531,15 @@ class DistributorController extends Controller
                 'success' => false,
                 'message' => 'Order not found.',
             ]);
+        }
+        $data = $order->toArray();
+        foreach ($data['order_products'] as $opIndex => $op) {
+            foreach ($op['product']['product_colors_images'] ?? [] as $imgIndex => $img) {
+                $data['order_products'][$opIndex]['product']['product_colors_images'][$imgIndex]['images'] = array_map(
+                    fn($i) => url('images/product_images/' . $i),
+                    $img['images'] ?? []
+                );
+            }
         }
 
         return response()->json([

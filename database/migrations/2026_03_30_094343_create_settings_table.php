@@ -11,14 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('admins', function (Blueprint $table) {
+        Schema::create('settings', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->nullable();
             $table->string('email')->nullable();
-            $table->string('phone_no', 20)->nullable();
-            $table->integer('otp')->nullable();
-            $table->timestamp('otp_expires_at')->nullable();
-            $table->string('profile_photo')->nullable();
+            $table->string('phone_no')->nullable();
+            $table->string('office_timings')->nullable();
+            $table->string('note', 1000)->nullable();
             $table->timestamps();
         });
     }
@@ -28,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('admins');
+        Schema::dropIfExists('settings');
     }
 };

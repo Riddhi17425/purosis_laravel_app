@@ -29,6 +29,8 @@ Route::middleware('verify.token')->group(function () {
         Route::post('/verify-otp', [AdminController::class, 'verifyAdminOtp']);
     });
 
+    Route::get('get-support-details', [AdminController::class, 'getSupportDetails']);
+
     Route::prefix('user')->group(function () {
         Route::post('/send-otp', [UserController::class, 'sendUsetOtp']);
         Route::post('/verify-otp', [UserController::class, 'verifyUserOtp']);
@@ -50,12 +52,14 @@ Route::middleware('verify.token')->group(function () {
 //ADMIN
 Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
 
+    Route::post('update-support-details', [AdminController::class, 'updateSupportDetails']);
+
     Route::get('get-dashboard-data', [AdminController::class, 'getDashboardData']);
     Route::get('order-history', [AdminController::class, 'orderHistory']);
     Route::get('order-details', [AdminController::class, 'orderDetails']);
 
-    Route::post('add-update-profile', [AdminController::class, 'addUpdateProfile']);
-    Route::get('get-profiles', [AdminController::class, 'getProfiles']);
+    Route::post('update-profile', [AdminController::class, 'updateProfile']);
+    Route::get('get-profile', [AdminController::class, 'getProfile']);
 
     Route::post('add-update-category', [ProductController::class, 'addUpdateCategory']);
     Route::get('get-categories', [ProductController::class, 'getCategories']);
