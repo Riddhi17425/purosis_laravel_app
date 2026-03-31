@@ -17,7 +17,7 @@ return new class extends Migration
             $table->enum('type', ['inward', 'outward'])->nullable()->comment('inward or outward');
             $table->string('item_id')->nullable();
             $table->integer('qty')->nullable()->change();
-            $table->string('recipient_type')->nullable();
+            $table->string('recipient_id')->nullable();
             $table->string('notes', 700)->nullable();
             $table->timestamps();
         });

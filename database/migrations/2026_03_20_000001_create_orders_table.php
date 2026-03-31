@@ -18,8 +18,8 @@ return new class extends Migration
             $table->string('remarks', 255)->nullable();
             $table->decimal('total_weight', 10, 2)->nullable();
             $table->decimal('total_cbm', 10, 3)->nullable();
-            $table->string('status')->default('pending')->comment('pending, confirmed, failed, cancelled');
-            $table->string('shipping_status')->default('pending')->comment('pending, confirmed, in-process, delivered, cancelled');
+            $table->string('status')->default('pending')->comment('pending, confirmed, failed, declined, completed');
+            $table->string('shipping_status')->default('pending')->comment('pending, approved, confirmed, in-process, delivered, cancelled, declined');
             $table->timestamps();
         });
     }

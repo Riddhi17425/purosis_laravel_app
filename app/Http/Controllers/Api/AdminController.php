@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{Admin, Distributor, Order, Product, Brochure, Video, Leaflet, Post, Reel, Dealer, Setting};
+use App\Models\{Admin, Distributor, Order, Product, Brochure, Video, Leaflet, Post, Reel, Dealer, Setting, Banner};
 use Auth;
 
 class AdminController extends Controller
@@ -309,7 +309,7 @@ class AdminController extends Controller
         }
 
         $sortOrder = $request->sort_by === 'oldest' ? 'asc' : 'desc';
-        $orders = Order::select('id', 'order_number', 'total_weight', 'shipping_status', 'created_at')
+        $orders = Order::select('id', 'order_number', 'total_weight', 'status', 'shipping_status', 'created_at')
             ->withCount('orderProducts')
             ->with(['orderProducts' => function     ($query) {
                 $query->select('id', 'order_id', 'product_id')
@@ -430,6 +430,210 @@ class AdminController extends Controller
         ]);
     }
 
+    public function addUpdateBanner(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'banner_id' => 'nullable|exists:banners,id',
+            'type'      => 'required|in:distributor,dealer',
+            'image'     => 'required_without:banner_id|image|mimes:jpeg,jpg,png,webp|max:2048',
+        ], [
+            'banner_id.exists'         => 'The selected banner is invalid.',
+            'type.required'            => 'The type field is required.',
+            'type.in'                  => 'Type must be either distributor or dealer.',
+            'image.required_without'   => 'Please upload a banner image.',
+            'image.image'              => 'The uploaded file must be an image.',
+            'image.mimes'             => 'Only jpeg, jpg, png, and webp images are allowed.',
+            'image.max'                => 'The image must not exceed 2MB in size.',
+        ]);
 
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ]);
+        }
+
+        if ($request->banner_id) {
+            $banner = Banner::find($request->banner_id);
+            if (!$banner) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Banner not found.',
+                ]);
+            }
+        } else {
+            $banner = new Banner();
+        }
+
+        $banner->type = $request->type;
+        $banner->save();
+
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $fileName = $banner->id . '_' . time() . '_' . $file->getClientOriginalName();
+            $destinationPath = public_path('images/banner_images');
+            if (!file_exists($destinationPath)) {
+                mkdir($destinationPath, 0755, true);
+            }
+            // Delete old image if updating
+            if ($banner->image) {
+                $oldFile = $destinationPath . '/' . $banner->image;
+                if (file_exists($oldFile)) {
+                    unlink($oldFile);
+                }
+            }
+            $file->move($destinationPath, $fileName);
+            $banner->image = $fileName;
+        }
+        $banner->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => $request->banner_id ? 'Banner updated successfully.' : 'Banner added successfully.',
+            'data'    => $banner,
+        ]);
+    }
+
+    public function getBanners(Request $request)
+    {
+        $query = Banner::query();
+
+        if ($request->type) {
+            $query->where('type', $request->type);
+        }
+
+        $banners = $query->latest()->get();
+
+        $banners->transform(function ($banner) {
+            $banner->image = $banner->image ? url('images/banner_images/' . $banner->image) : null;
+            return $banner;
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Banners retrieved successfully.',
+            'data'    => $banners,
+        ]);
+    }
+
+    public function deleteBanner(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'banner_id' => 'required|exists:banners,id',
+        ], [
+            'banner_id.required' => 'The banner_id field is required.',
+            'banner_id.exists'   => 'The selected banner is invalid.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ]);
+        }
+
+        $banner = Banner::find($request->banner_id);
+
+        // Delete image from disk
+        if (isset($banner)) {
+            if(isset($banner->image) && $banner->image != ''){
+                $filePath = public_path('images/banner_images/' . $banner->image);
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+            }
+            $banner->delete();
+           
+            return response()->json([
+                'success' => true,
+                'message' => 'Banner deleted successfully.',
+            ]);
+        }else{
+            return response()->json([
+                'success' => false,
+                'message' => 'Banner not Found.',
+            ]);
+        }
+    }
+
+    public function approveDeclineOrder(Request $request){
+        $validator = Validator::make($request->all(), [
+            'order_id' => 'required|exists:orders,id',
+            'action' => 'required|in:approve,decline'
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ]);
+        }
+
+        $order = Order::find($request->order_id);
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found.',
+            ]);
+        }
+
+        if ($request->action === 'approve') {
+            $order->status = 'confirmed';
+            $order->shipping_status = 'approved';
+        } else if ($request->action === 'decline') {
+            $order->status = 'declined';
+            $order->shipping_status = 'declined';
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid action.',
+            ]);
+        }
+        $order->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Order has been {$order->status} successfully.",
+            'data'    => $order,
+        ]);
+    }
+
+    public function updateShippingStatus(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'order_id'        => 'required|exists:orders,id',
+            'shipping_status' => 'required|in:confirmed,in-process,delivered',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ]);
+        }
+
+        $order = Order::find($request->order_id);
+        $blockedStatuses = ['delivered', 'declined', 'pending'];
+        if (in_array($order->shipping_status, $blockedStatuses)) {
+            return response()->json([
+                'success' => false,
+                'message' => "You cannot update shipping status as it is already {$order->shipping_status}.",
+            ]);
+        }
+
+        $order->shipping_status = $request->shipping_status;
+        if ($request->shipping_status === 'delivered') {
+            $order->status = 'completed';
+        }
+        $order->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Shipping status updated to {$order->shipping_status} successfully.",
+            'data'    => $order,
+        ]);
+    }
 }
  

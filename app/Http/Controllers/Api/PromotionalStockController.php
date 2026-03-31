@@ -100,7 +100,7 @@ class PromotionalStockController extends Controller
         $promotionalStockTransaction->qty = $request->qty;
         $promotionalStockTransaction->notes = $request->notes ?? '';
         $promotionalStockTransaction->type = 'outward';
-        $promotionalStockTransaction->recipient_type = $request->distributor_id;
+        $promotionalStockTransaction->recipient_id = $request->distributor_id;
         $promotionalStockTransaction->save();
         $promotionalStockTransaction->serial_no = 'OUT-'. $promotionalStockTransaction->id;
         $promotionalStockTransaction->save();

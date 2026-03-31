@@ -6,8 +6,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{Post, Brochure, Reel, Leaflet, Subcategory, Product, Distributor, Dealer, Video};
+use App\Models\{Post, Brochure, Reel, Leaflet, Subcategory, Product, Distributor, Dealer, Video, Banner, Order, PromotionalStockTransaction};
 use DB;
+use Auth;
 
 class UserController extends Controller
 {
@@ -567,5 +568,45 @@ class UserController extends Controller
         }
         return $result;
     }
+
+    public function getBanners(Request $request){
+        $validator = Validator::make($request->all(), [
+            'type' => 'required|in:distributor,dealer',
+        ], [
+            'type.required' => 'The type field is required.',
+            'type.in'       => 'Type must be either distributor or dealer.',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ]);
+        }
+
+        $banners = Banner::select('id', 'type', 'image')->where('type', $request->type)->where('deleted_at', null)->get();
+        if ($banners->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Banners are not Found',
+            ]);
+        }
+        $banners->transform(function ($banner) {
+            $banner->image = $banner->image ? url('images/banner_images/' . $banner->image) : null;
+            return $banner;
+        });
+
+        $data = ['banners' => $banners];
+        if ($request->type === 'distributor') {
+            $data['total_purchased_order_count'] = Order::where('distributor_id', Auth::guard('distributor-api')->id())->where('status', 'confirmed')->count();
+            $data['promo_item_order_count'] = PromotionalStockTransaction::where('type', 'outward')->where('recipient_id', Auth::guard('distributor-api')->id())->count();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Banners retrieved successfully.',
+            'data' => $data
+        ]);
+    }   
 
 }

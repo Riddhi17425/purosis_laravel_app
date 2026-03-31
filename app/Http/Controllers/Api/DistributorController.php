@@ -548,5 +548,38 @@ class DistributorController extends Controller
             'data' => $order,
         ]);
     }
+
+    public function deleteCart(Request $request){
+        $validator = Validator::make($request->all(), [
+            'product_ids' => 'required|array',
+            'product_ids.*' => 'exists:products,id',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ]);
+        }
+
+        $distributorId = Auth::guard('distributor-api')->id();
+        $checkExists = Cart::where('distributor_id', $distributorId)->whereIn('product_id', $request->product_ids)->get();
+
+        if ($checkExists->isNotEmpty()) {
+            $checkExists->each->delete();
+           
+            return response()->json([
+                'success' => true,
+                'message' => 'Cart cleared successfully.',
+            ]);
+        }else{
+            return response()->json([
+                'success' => false,
+                'message' => 'Product not found in cart.',
+            ]);
+        }
+
+        
+    }
    
 }
