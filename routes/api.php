@@ -42,6 +42,7 @@ Route::middleware('verify.token')->group(function () {
         Route::get('/get-details', [UserController::class, 'getDetails']);
         Route::get('/get-subcategories', [UserController::class, 'getSubCatBasedOnCat']);
         Route::get('get-banners', [UserController::class, 'getBanners']);
+        Route::get('get-categories', [UserController::class, 'getCategories']);
     });
 
 });
@@ -61,6 +62,9 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
     Route::post('add-update-distributor', [AdminController::class, 'addUpdateDistributor']);
     Route::post('approve-decline-order', [AdminController::class, 'approveDeclineOrder']);
     Route::post('update-shipping-status', [AdminController::class, 'updateShippingStatus']);
+    // Route::post('update-distributor-details', [AdminController::class, 'updateDistributorDetails']); 
+    Route::post('update-distributor-status', [AdminController::class, 'updateDistributorStatus']); 
+    Route::get('get-support-message-inquiries', [AdminController::class, 'getSupportMessageInquiries']);
 
     Route::post('add-update-category', [ProductController::class, 'addUpdateCategory']);
     Route::get('get-categories', [ProductController::class, 'getCategories']);
@@ -75,15 +79,11 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
     Route::get('get-videos', [MarketingController::class, 'getVideos']);
     Route::post('add-update-leaflet', [MarketingController::class, 'addUpdateLeaflet']);
     Route::get('get-leaflets', [MarketingController::class, 'getLeaflets']);
-
     Route::post('add-update-post', [PostController::class, 'addUpdatePost']);
     Route::get('get-posts', [PostController::class, 'getPosts']);
-
     Route::post('add-update-reel', [ReelController::class, 'addUpdateReel']);
     Route::get('get-reels', [ReelController::class, 'getReels']);
-
     Route::post('stock-inward', [PromotionalStockController::class, 'stockInward']);
-    Route::post('stock-outward', [PromotionalStockController::class, 'stockOutward']);
     
 
 });
@@ -100,6 +100,7 @@ Route::middleware('auth:distributor-api')->prefix('distributor')->group(function
     Route::post('delete-address', [DistributorController::class, 'deleteAddress']);
     Route::get('get-addresses', [DistributorController::class, 'getAddresses']);
     Route::post('update-profile', [DistributorController::class, 'updateProfile']);
+    Route::post('support-message-inquiry', [DistributorController::class, 'supportMessageInquiry']);
 
 }); 
 

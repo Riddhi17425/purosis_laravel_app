@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{Post, Brochure, Reel, Leaflet, Subcategory, Product, Distributor, Dealer, Video, Banner, Order, PromotionalStockTransaction};
+use App\Models\{Post, Brochure, Reel, Leaflet, Subcategory, Product, Distributor, Dealer, Video, Banner, Order, PromotionalStockTransaction, Category};
 use DB;
 use Auth;
 
@@ -608,5 +608,21 @@ class UserController extends Controller
             'data' => $data
         ]);
     }   
+
+    public function getCategories(Request $reequest){
+        $categories = Category::select('id', 'category_name')->get();
+        if(isset($categories) && is_countable($categories) && count($categories) > 0){
+            return response()->json([
+                'success' => true,
+                'message' => 'Categories get Successfully',
+                'data' => $categories
+            ]);
+        }else{
+            return response()->json([
+                'success' => false,
+                'message' => 'Categories are not Found',
+            ]);
+        }
+    }
 
 }

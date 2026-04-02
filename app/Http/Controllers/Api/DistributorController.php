@@ -4,11 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\{Cart, Product, Address, Order, OrderProduct};
+use App\Models\{Cart, Product, Address, Order, OrderProduct, SupportMessageInquiry};
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Auth;
+use Illuminate\Support\Facades\Mail;
 
 class DistributorController extends Controller
 {
@@ -30,7 +31,7 @@ class DistributorController extends Controller
             ]);
         }
 
-        $checkCart = Cart::where('product_id', $request->product_id)->where('distributor_id', Auth::guard('distributor-api')->id())->first();
+        $checkCart = Cart::where('product_id', $request->product_id)->where('distributor_id', Auth::guard('distributor-api')->id())->where('color_code', $request->color_code)->first();
         $product = Product::where('id', $request->product_id)->first();
         if(!$checkCart){
             $checkCart = new Cart();
@@ -551,8 +552,8 @@ class DistributorController extends Controller
 
     public function deleteCart(Request $request){
         $validator = Validator::make($request->all(), [
-            'product_ids' => 'required|array',
-            'product_ids.*' => 'exists:products,id',
+            'cart_ids' => 'required|array',
+            'cart_ids.*' => 'exists:carts,id',
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -563,8 +564,7 @@ class DistributorController extends Controller
         }
 
         $distributorId = Auth::guard('distributor-api')->id();
-        $checkExists = Cart::where('distributor_id', $distributorId)->whereIn('product_id', $request->product_ids)->get();
-
+        $checkExists = Cart::where('distributor_id', $distributorId)->whereIn('id', $request->cart_ids)->get();
         if ($checkExists->isNotEmpty()) {
             $checkExists->each->delete();
            
@@ -578,8 +578,49 @@ class DistributorController extends Controller
                 'message' => 'Product not found in cart.',
             ]);
         }
-
+    }
+    
+    public function supportMessageInquiry(Request $request){
+        $validator = Validator::make($request->all(), [
+            'subject' => 'required|string|max:500',
+            'product_id' => 'required|exists:products,id',
+            'message' => 'required|string|max:1000',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ]);
+        }
         
+        $supportMessage = SupportMessageInquiry::create([
+            'distributor_id' => Auth::guard('distributor-api')->id(),
+            'subject' => $request->subject,
+            'product_id' => $request->product_id,
+            'message' => $request->message,
+        ]);
+
+        //SEND MAIL TO ADMIN
+        $adminEmail = config('global_values.admin_email');
+        $data = [
+            'distributor'       => $supportMessage->distributor->name ?? null,
+            'subject'       => $supportMessage->subject ?? null,
+            'message_data'       => $supportMessage->message ?? null,
+        ];
+        try {
+            Mail::send('email.admin.support_inquiry', $data, function ($message) use ($adminEmail) {
+                $message->to($adminEmail)->subject('New Support Message Inquiry');
+            });
+        } catch (Exception $e) {
+            \Log::error('Support Message Inquiry sending failed: '.$e->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Your message has been sent successfully. We will get back to you soon.',
+            'data' => $supportMessage
+        ]);
     }
    
 }

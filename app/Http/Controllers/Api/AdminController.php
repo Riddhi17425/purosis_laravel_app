@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{Admin, Distributor, Order, Product, Brochure, Video, Leaflet, Post, Reel, Dealer, Setting, Banner};
+use App\Models\{Admin, Distributor, Order, Product, Brochure, Video, Leaflet, Post, Reel, Dealer, Setting, Banner, SupportMessageInquiry};
 use Auth;
 
 class AdminController extends Controller
@@ -91,6 +91,8 @@ class AdminController extends Controller
         $admin->token = $token;
         $admin->role = 'admin';
 
+        $admin->profile_photo = isset($admin->profile_photo) ? url('images/admin_profile_photos/' . $admin->profile_photo) : null;
+
         return response()->json([
             'success' => true,
             'message' => 'Login successful',
@@ -133,6 +135,8 @@ class AdminController extends Controller
         }
         $profile->save();
 
+        $profile->profile_photo = isset($profile->profile_photo) ? url('images/admin_profile_photos/' . $profile->profile_photo) : null;
+
         return response()->json([
             'success' => true,
             'message' => 'Profile stored Successfully',
@@ -163,6 +167,7 @@ class AdminController extends Controller
         $validator = Validator::make($request->all(), [
             'distributor_id' => 'nullable|exists:distributors,id',
             'name' => 'required',
+            'company_name' => 'nullable|string|max:255',
             'email' => 'required|email',
             //'phone_no' => 'required|digits_between:10,15',
             'whatsapp_no' => 'required|digits_between:10,15',
@@ -179,8 +184,12 @@ class AdminController extends Controller
                     fn ($query) => $query
                 ),
             ],
+            'alternate_mobile_no' => 'nullable|digits_between:10,15',
+            'landline_no' => 'nullable|string|max:20',
+            'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ], [
             'name.required' => 'The name field is required.',
+            'company_name.required' => 'Company name is required.',
             'email.required' => 'The email field is required.',
             'email.email' => 'Please enter a valid email address.',
             'phone_no.required' => 'The mobile number field is required.',
@@ -207,8 +216,11 @@ class AdminController extends Controller
             }
 
             $distributor->name = $request->name;
+            $distributor->company_name = $request->company_name ?? null;
             $distributor->email = $request->email;
             $distributor->phone_no = $request->phone_no;
+            $distributor->alternate_mobile_no = $request->alternate_mobile_no ?? null;
+            $distributor->landline_no = $request->landline_no ?? null;
             $distributor->whatsapp_no = $request->whatsapp_no;
             $distributor->gst_number = $request->gst_number;
             $distributor->area = $request->area;
@@ -217,6 +229,19 @@ class AdminController extends Controller
             $distributor->shipping_address_pincode = $request->shipping_address_pincode;
             $distributor->is_active = 1;
             $distributor->save();
+
+            $path = public_path('images/profile');
+            if ($request->hasFile('logo')) {
+                $file = $request->file('logo');
+                $filename = $request->distributor_id.'_'.time() . '_' . $file->getClientOriginalName();
+                // Delete old logo if it exists
+                if ($distributor->logo && file_exists($path . '/' . $distributor->logo)) {
+                    unlink($path . '/' . $distributor->logo);
+                }
+                $file->move($path, $filename);
+                $distributor->logo = $filename;
+                $distributor->save();
+            }
 
             return response()->json([
                 'success' => true,
@@ -252,7 +277,7 @@ class AdminController extends Controller
         $distributor = $distributor->get();
         if(isset($distributor) && is_countable($distributor) && count($distributor) > 0){
             foreach($distributor as $key => $val){
-                $val->total_orders = 0; //NEED TO MAKE DYNAMIC
+                $val->total_orders = Order::where('distributor_id', $val->id)->count();
                 $val->assets_downloaded = 0; //NEED TO MAKE DYNAMIC
                 $val->last_active = 0; //NEED TO MAKE DYNAMIC LIKE 2 DAYS ago 30 minutes ago
             }
@@ -561,7 +586,7 @@ class AdminController extends Controller
     public function approveDeclineOrder(Request $request){
         $validator = Validator::make($request->all(), [
             'order_id' => 'required|exists:orders,id',
-            'action' => 'required|in:approve,decline'
+            'action' => 'required|in:approved,declined'
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -634,6 +659,120 @@ class AdminController extends Controller
             'message' => "Shipping status updated to {$order->shipping_status} successfully.",
             'data'    => $order,
         ]);
+    }
+
+    // public function updateDistributorDetails(Request $request) {
+    //     $validator = Validator::make($request->all(), [
+    //         'distributor_id' => 'required|exists:distributors,id',
+    //         'company_name' => 'required|string|max:255',
+    //         'contact_person_name' => 'required|string|max:255',
+    //         'gst_number' => 'required|string|max:50',
+    //         'area' => 'nullable|string|max:255',
+    //         'mobile_no' => 'required|digits_between:10,15',
+    //         'alternate_mobile_no' => 'nullable|digits_between:10,15',
+    //         'landline_no' => 'nullable|string|max:20',
+    //         'email' => 'required|email|max:255',
+    //         'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+    //     ], [
+    //         'company_name.required' => 'Company name is required.',
+    //         'contact_person_name.required' => 'Contact person name is required.',
+    //         'gst_number.required' => 'GST number is required.',
+    //         'mobile_no.required' => 'Mobile number is required.',
+    //         'mobile_no.digits_between' => 'Mobile number must be between 10 and 15 digits.',
+    //         'email.required' => 'Email is required.',
+    //         'email.email' => 'Please enter a valid email address.',
+    //     ]);
+    //     if ($validator->fails()) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Validation failed.',
+    //             'errors'  => $validator->errors(),
+    //         ]);
+    //     }
+
+    //     $distributor = Distributor::find($request->distributor_id);
+    //     if (!$distributor) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Distributor not found.',
+    //         ]);
+    //     }
+
+    //     $data = [
+    //         'company_name' => $request->company_name,
+    //         'name' => $request->contact_person_name,
+    //         'gst_number' => $request->gst_number,
+    //         'area' => $request->area,
+    //         'phone_no' => $request->mobile_no,
+    //         'alternate_mobile_no' => $request->alternate_mobile_no,
+    //         'landline_no' => $request->landline_no,
+    //         'email' => $request->email,
+    //     ];
+
+    //     $path = public_path('images/profile');
+    //     if ($request->hasFile('logo')) {
+    //         $file = $request->file('logo');
+    //         $filename = $request->distributor_id.'_'.time() . '_' . $file->getClientOriginalName();
+    //         $file->move($path, $filename);
+    //         $data['logo'] = $filename;
+    //     }
+    //     $distributor->update($data);
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => "Distributor has been " . ($distributor->is_active ? "activated" : "deactivated") . " successfully.",
+    //         'data'    => $distributor,
+    //     ]);
+    // }
+
+    public function updateDistributorStatus(Request $request) {
+        $validator = Validator::make($request->all(), [
+            'distributor_id' => 'required|exists:distributors,id',
+            'status' => 'required|in:0,1',
+        ], [
+            'status.required' => 'Status is required.',
+            'status.in' => 'Status must be either 0 (deactivated) or 1 (activated).',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ]);
+        }
+
+        $distributor = Distributor::find($request->distributor_id);
+        if (!$distributor) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Distributor not found.',
+            ]);
+        }
+
+        $distributor->is_active = $request->status;
+        $distributor->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Distributor has been " . ($distributor->is_active ? "activated" : "deactivated") . " successfully.",
+            'data'    => $distributor,
+        ]);
+    }
+
+    public function getSupportMessageInquiries(Request $request){
+        $supportMessages = SupportMessageInquiry::select('id', 'distributor_id', 'subject', 'product_id', 'message', 'created_at')->with('distributor:id,name,company_name,email')->with('product:id,product_name')->latest()->get();
+        if(isset($supportMessages) && is_countable($supportMessages) && count($supportMessages) > 0){
+            return response()->json([
+                'success' => true,
+                'message' => 'Support messages retrieved successfully.',
+                'data' => $supportMessages
+            ]);
+        }else{
+            return response()->json([
+                'success' => false,
+                'message' => 'No support messages found.',
+            ]);
+        }
     }
 }
  
