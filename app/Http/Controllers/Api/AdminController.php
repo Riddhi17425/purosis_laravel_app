@@ -8,9 +8,17 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use App\Models\{Admin, Distributor, Order, Product, Brochure, Video, Leaflet, Post, Reel, Dealer, Setting, Banner, SupportMessageInquiry};
 use Auth;
+use App\Services\LocationTrackerService;
 
 class AdminController extends Controller
 {
+    protected $locationTrackerService;
+
+    public function __construct(LocationTrackerService $locationTrackerService)
+    {
+        $this->locationTrackerService = $locationTrackerService;
+    }
+
     public function sendAdminOtp(Request $request){
         $validator = Validator::make($request->all(), [
             'phone_no' => 'required',
@@ -88,6 +96,10 @@ class AdminController extends Controller
             'otp_expires_at' => null
         ],);
 
+
+        // Track login location and details
+        $this->locationTrackerService->track('login', 'admin', $admin->id, $request);
+        
         $admin->token = $token;
         $admin->role = 'admin';
 
