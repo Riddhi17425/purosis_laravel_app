@@ -43,8 +43,8 @@ class LocationTrackerService
                         'city' => $geo['city'] ?? null,
                         'postal_code' => $geo['zip'] ?? null,
                         'address' => null,
-                        'latitude' => $geo['lat'] ?? null,
-                        'longitude' => $geo['lon'] ?? null,
+                        'latitude' => $request->latitude ? $request->latitude : $geo['lat'] ?? null,
+                        'longitude' => $request->longitude ? $request->longitude : $geo['lon'] ?? null,
                     ];
                 }
             }
