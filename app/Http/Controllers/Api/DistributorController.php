@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\{Cart, Product, Address, Order, OrderProduct, SupportMessageInquiry};
+use App\Services\LocationTrackerService;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -13,6 +14,12 @@ use Illuminate\Support\Facades\Mail;
 
 class DistributorController extends Controller
 {
+    protected $locationTrackerService;
+    public function __construct(LocationTrackerService $locationTrackerService)
+    {
+        $this->locationTrackerService = $locationTrackerService;
+    }
+
     public function addToCart(Request $request){
         $validator = Validator::make($request->all(), [
             'product_id' => 'nullable|exists:products,id',
@@ -450,6 +457,7 @@ class DistributorController extends Controller
             }
             $deleteQuery->delete();
         }
+        $this->locationTrackerService->track('order', 'distributor', $distributorId, $request , $order->id);
 
         return response()->json([
             'success' => true,
