@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{Admin, Distributor, Order, Product, Brochure, Video, Leaflet, Post, Reel, Dealer, Setting, Banner, SupportMessageInquiry};
+use App\Models\{Admin, Distributor, Order, Product, Brochure, Video, Leaflet, Post, Reel, Dealer, Setting, Banner, SupportMessageInquiry, UserActivityLocation};
 use Auth;
 use App\Services\LocationTrackerService;
 
@@ -96,9 +96,6 @@ class AdminController extends Controller
             'otp_expires_at' => null
         ],);
 
-
-        // Track login location and details
-        $this->locationTrackerService->track('login', 'admin', $admin->id, $request);
         
         $admin->token = $token;
         $admin->role = 'admin';
@@ -785,6 +782,49 @@ class AdminController extends Controller
                 'message' => 'No support messages found.',
             ]);
         }
+    }
+
+   public function userActivityLogs(Request $request)
+    {
+        $userType = $request->user_type;
+        $actorID = $request->actor_id;
+    
+        if (!in_array($userType, ['distributor', 'dealer'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid user type. Allowed values: distributor, dealer.'
+            ], 422);
+        }
+
+        $table = $userType === 'distributor' ? 'distributors' : 'dealers';
+
+        $validator = Validator::make(
+            [
+                'actor_id' => $actorID,
+            ],
+            [
+                'actor_id' => 'required|exists:' . $table . ',id',
+            ]
+        );
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $logs = UserActivityLocation::where('actor_id', $actorID)
+            ->where('actor_type', $userType)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User activity logs retrieved successfully.',
+            'data' => $logs
+        ]);
     }
 }
  
