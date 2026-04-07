@@ -121,7 +121,7 @@ class DistributorController extends Controller
             'mobile_no' => 'required|digits_between:10,15',
             'email_address' => 'required|email|max:255',
             'is_shipping' => 'required|in:0,1',
-            'shipping_address' => 'required_if:is_shipping,1',
+            'shipping_address' => 'nullable|required_if:is_shipping,1',
         ],[
             'dealer_name.string' => 'Dealer name must be a valid string.',
             'dealer_name.max' => 'Dealer name cannot exceed 255 characters.',
