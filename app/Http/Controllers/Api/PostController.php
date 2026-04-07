@@ -12,11 +12,12 @@ use Illuminate\Support\Facades\Validator;
 class PostController extends Controller
 {
     public function addUpdatePost(Request $request){
-        $postCategories = config('global_values.post_category');
+        //$postCategories = config('global_values.post_category');
         $validator = Validator::make($request->all(), [
             'post_id' => 'nullable|exists:posts,id',
             'title' => 'required',
-            'category' => 'required|in:' . implode(',', array_keys($postCategories)),
+            //'category' => 'required|in:' . implode(',', array_keys($postCategories)),
+            'category' => 'required|exists:products,id',
             'media_file' => 'required_without:post_id|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'month' => 'nullable',
             'year' => 'nullable',
@@ -26,6 +27,7 @@ class PostController extends Controller
             'post_id.exists' => 'The selected post is invalid.',
             'title.required' => 'The title field is required.',
             'category.required' => 'Please select a category.',
+            'category.exists' => 'The selected category is invalid.',
             'media_file.required_without' => 'Please upload a Image file.',
             'media_file.file' => 'The uploaded file must be a valid file.',
             'media_file.mimes' => 'Only files are allowed.',
@@ -94,7 +96,7 @@ class PostController extends Controller
             ]);
         }
 
-        $posts = Post::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured');
+        $posts = Post::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured')->with('category:id,product_name');
         if(isset($request->post_id) && $request->post_id != ''){
             $posts = $posts->where('id', $request->post_id);
         }

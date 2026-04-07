@@ -149,7 +149,7 @@ class UserController extends Controller
             ]);
         }
 
-        $posts = Post::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured');
+        $posts = Post::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured')->with('category:id,product_name');
         if(isset($request->post_id) && $request->post_id != ''){
             $posts = $posts->where('id', $request->post_id);
         }
@@ -205,7 +205,7 @@ class UserController extends Controller
             ]);
         }
 
-        $brochures = Brochure::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured');
+        $brochures = Brochure::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured')->with('category:id,product_name');
         if(isset($request->brochure_id) && $request->brochure_id != ''){
             $brochures = $brochures->where('id', $request->brochure_id);
         }
@@ -261,7 +261,7 @@ class UserController extends Controller
             ]);
         }
 
-        $reels = Reel::select('id', 'title', 'category', 'media_file', 'thumbnail_image', 'month', 'year', 'description', 'is_featured');
+        $reels = Reel::select('id', 'title', 'category', 'media_file', 'thumbnail_image', 'month', 'year', 'description', 'is_featured')->with('category:id,product_name');
         if(isset($request->reel_id) && $request->reel_id != ''){
             $reels = $reels->where('id', $request->reel_id);
         }
@@ -319,7 +319,7 @@ class UserController extends Controller
             ]);
         }
 
-        $leaflets = Leaflet::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured');
+        $leaflets = Leaflet::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured')->with('category:id,product_name');
         if (isset($request->leaflet_id) && $request->leaflet_id != '') {
             $leaflets = $leaflets->where('id', $request->leaflet_id);
         }
@@ -382,7 +382,7 @@ class UserController extends Controller
             ]);
         }
 
-        $videos = Video::select('id', 'title', 'category', 'type', 'media_file', 'thumbnail_image', 'month', 'year', 'description', 'is_featured');
+        $videos = Video::select('id', 'title', 'category', 'type', 'media_file', 'thumbnail_image', 'month', 'year', 'description', 'is_featured')->with('category:id,product_name');
         if(isset($request->video_id) && $request->video_id != ''){
             $videos = $videos->where('id', $request->video_id);
         }
@@ -550,10 +550,10 @@ class UserController extends Controller
 
     public function getDetails(Request $request){
         $data = [];
-        $data['brochure_category'] = $this->formatKeyValue(config('global_values.brochure_category'));
-        $data['post_category'] = $this->formatKeyValue(config('global_values.post_category'));
-        $data['reel_category'] = $this->formatKeyValue(config('global_values.reel_category'));
-        $data['video_category'] = $this->formatKeyValue(config('global_values.video_category'));
+        //$data['brochure_category'] = $this->formatKeyValue(config('global_values.brochure_category'));
+        //$data['post_category'] = $this->formatKeyValue(config('global_values.post_category'));
+        //$data['reel_category'] = $this->formatKeyValue(config('global_values.reel_category'));
+        //$data['video_category'] = $this->formatKeyValue(config('global_values.video_category'));
         $data['video_type'] = $this->formatKeyValue(config('global_values.video_type'));
         $data['user_types'] = config('global_values.user_types');
         $data['shipping_status'] = $this->formatKeyValue(config('global_values.shipping_status'));

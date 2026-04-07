@@ -12,11 +12,12 @@ use Illuminate\Support\Facades\Validator;
 class ReelController extends Controller
 {
     public function addUpdateReel(Request $request){
-        $reelCategories = config('global_values.reel_category');
+        //$reelCategories = config('global_values.reel_category');
         $validator = Validator::make($request->all(), [
             'reel_id' => 'nullable|exists:reels,id',
             'title' => 'required',
-            'category' => 'required|in:' . implode(',', array_keys($reelCategories)),
+            //'category' => 'required|in:' . implode(',', array_keys($reelCategories)),
+            'category' => 'required|exists:products,id',
             'media_file' => 'required_without:reel_id|file|max:2048',
             'thumbnail_image' => 'required_without:reel_id|image|mimes:jpeg,png,jpg,webp|max:2048',
             'month' => 'nullable',
@@ -27,6 +28,7 @@ class ReelController extends Controller
             'reel_id.exists' => 'The selected reel is invalid.',
             'title.required' => 'The title field is required.',
             'category.required' => 'Please select a category.',
+            'category.exists' => 'The selected category is invalid.',
             'media_file.required_without' => 'Please upload a PDF file.',
             'media_file.file' => 'The uploaded file must be a valid file.',
             'media_file.mimes' => 'Only files are allowed.',
@@ -121,7 +123,7 @@ class ReelController extends Controller
             ]);
         }
 
-        $reels = Reel::select('id', 'title', 'category', 'media_file', 'thumbnail_image', 'month', 'year', 'description', 'is_featured');
+        $reels = Reel::select('id', 'title', 'category', 'media_file', 'thumbnail_image', 'month', 'year', 'description', 'is_featured')->with('category:id,product_name');
         if(isset($request->reel_id) && $request->reel_id != ''){
             $reels = $reels->where('id', $request->reel_id);
         }
