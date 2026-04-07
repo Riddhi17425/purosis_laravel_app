@@ -614,10 +614,10 @@ class AdminController extends Controller
             ]);
         }
 
-        if ($request->action === 'approve') {
+        if ($request->action === 'approved') {
             $order->status = 'confirmed';
             $order->shipping_status = 'approved';
-        } else if ($request->action === 'decline') {
+        } else if ($request->action === 'declined') {
             $order->status = 'declined';
             $order->shipping_status = 'declined';
         } else {
