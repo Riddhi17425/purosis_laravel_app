@@ -43,6 +43,7 @@ Route::middleware('verify.token')->group(function () {
         Route::get('/get-subcategories', [UserController::class, 'getSubCatBasedOnCat']);
         Route::get('get-banners', [UserController::class, 'getBanners']);
         Route::get('get-categories', [UserController::class, 'getCategories']);
+        
     });
 
 });
@@ -84,7 +85,7 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
     Route::post('add-update-reel', [ReelController::class, 'addUpdateReel']);
     Route::get('get-reels', [ReelController::class, 'getReels']);
     Route::post('stock-inward', [PromotionalStockController::class, 'stockInward']);
-    
+    Route::Post('user-activity-logs', [AdminController::class, 'userActivityLogs']);    
 
 });
 
@@ -101,6 +102,7 @@ Route::middleware('auth:distributor-api')->prefix('distributor')->group(function
     Route::get('get-addresses', [DistributorController::class, 'getAddresses']);
     Route::post('update-profile', [DistributorController::class, 'updateProfile']);
     Route::post('support-message-inquiry', [DistributorController::class, 'supportMessageInquiry']);
+    
 
 }); 
 

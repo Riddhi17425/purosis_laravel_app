@@ -6,12 +6,19 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{Post, Brochure, Reel, Leaflet, Subcategory, Product, Distributor, Dealer, Video, Banner, Order, PromotionalStockTransaction, Category};
+use App\Models\{Post, Brochure, Reel, Leaflet, Subcategory, Product, Distributor, Dealer, Video, Banner, Order, PromotionalStockTransaction, Category, UserActivityLocation};
+use App\Services\LocationTrackerService;
 use DB;
 use Auth;
 
 class UserController extends Controller
 {
+    protected $locationTrackerService;
+
+    public function __construct(LocationTrackerService $locationTrackerService)
+    {
+        $this->locationTrackerService = $locationTrackerService;
+    }
     public function sendUsetOtp(Request $request){
         $userType = config('global_values.user_types');
         $validator = Validator::make($request->all(), [
@@ -58,7 +65,7 @@ class UserController extends Controller
 
         // 🔹 Here integrate SMS API
         // Example: sendSMS($admin->mobile, "Your OTP is $otp");
-
+       
         return response()->json([
             'success' => true,
             'message' => 'OTP sent successfully',
@@ -121,7 +128,7 @@ class UserController extends Controller
         if($user->logo){
             $user->logo = asset('images/profile/'.$user->logo);
         }
-
+        $this->locationTrackerService->track('login', $request->user_type, $user->id, $request);
         return response()->json([
             'success' => true,
             'message' => 'Login successful',
@@ -624,5 +631,7 @@ class UserController extends Controller
             ]);
         }
     }
+
+    
 
 }
