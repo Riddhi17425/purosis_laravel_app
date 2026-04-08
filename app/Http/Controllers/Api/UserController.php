@@ -8,16 +8,19 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use App\Models\{Post, Brochure, Reel, Leaflet, Subcategory, Product, Distributor, Dealer, Video, Banner, Order, PromotionalStockTransaction, Category, UserActivityLocation};
 use App\Services\LocationTrackerService;
+use App\Services\OtpTransactionService;
 use DB;
 use Auth;
 
 class UserController extends Controller
 {
     protected $locationTrackerService;
+    protected $otpTransactionService;
 
-    public function __construct(LocationTrackerService $locationTrackerService)
+    public function __construct(LocationTrackerService $locationTrackerService, OtpTransactionService $otpTransactionService)
     {
         $this->locationTrackerService = $locationTrackerService;
+        $this->otpTransactionService = $otpTransactionService;
     }
     public function sendUsetOtp(Request $request){
         $userType = config('global_values.user_types');
@@ -57,14 +60,15 @@ class UserController extends Controller
             ], 404);
         }
 
-        $otp = rand(1000, 9999);
+        // Generate OTP using comman service 
+        $otp = $this->otpTransactionService->generateOtp();
         $user->update([
             'otp' => $otp,
             'otp_expires_at' => now()->addMinutes(5)
         ]);
 
-        // 🔹 Here integrate SMS API
-        // Example: sendSMS($admin->mobile, "Your OTP is $otp");
+        // Send OTP SMS Service when upload on productions then uncomment this s
+        // $this->otpTransactionService->sendOtp($user->phone_no, $otp);
        
         return response()->json([
             'success' => true,

@@ -31,4 +31,14 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'otp_transaction' => [
+        'api_key'        => env('SHREE_SMS_API_KEY'),
+        'sender_id'      => env('SHREE_SMS_SENDER'),
+        'sms_type'       => env('SHREE_SMS_TYPE', 2),
+        'entity_id'      => env('SHREE_SMS_ENTITY_ID'),
+        'template_id'    => env('SHREE_SMS_TEMPLATE_ID'),
+        'url'            => env('SHREE_SMS_URL'),
+        'expiry_minutes' => env('SHREE_SMS_EXPIRY_MINUTES', 10),
+    ],
+
 ];

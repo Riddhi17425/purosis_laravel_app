@@ -10,14 +10,17 @@ use App\Models\{Admin, Distributor, Order, Product, Brochure, Video, Leaflet, Po
 use Auth;
 use Illuminate\Validation\Rule;
 use App\Services\LocationTrackerService;
+use App\Services\OtpTransactionService;
 
 class AdminController extends Controller
 {
     protected $locationTrackerService;
+    protected $otpTransactionService;
 
-    public function __construct(LocationTrackerService $locationTrackerService)
+    public function __construct(LocationTrackerService $locationTrackerService ,OtpTransactionService $otpTransactionService)
     {
         $this->locationTrackerService = $locationTrackerService;
+        $this->otpTransactionService = $otpTransactionService;
     }
 
     public function sendAdminOtp(Request $request){
@@ -40,14 +43,16 @@ class AdminController extends Controller
             ], 404);
         }
 
-        $otp = rand(1000, 9999);
+        // Generate OTP using comman service 
+        $otp = $this->otpTransactionService->generateOtp();
+
+        // Send OTP SMS Service when upload on productions then uncomment this s
+        // $this->otpTransactionService->sendOtp($admin->phone_no, $otp);
+
         $admin->update([
             'otp' => $otp,
             'otp_expires_at' => now()->addMinutes(5)
         ]);
-
-        // 🔹 Here integrate SMS API
-        // Example: sendSMS($admin->mobile, "Your OTP is $otp");
 
         return response()->json([
             'success' => true,

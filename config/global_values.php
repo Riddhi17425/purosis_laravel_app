@@ -1,5 +1,10 @@
 <?php
 return [
+    'admin_email' => 'webdeveloper12.intelliworkz@gmail.com',
+    'brochure_category' => ['brochure1' => 'Brochure 1', 'brochure2' => 'Brochure 2'],
+    'post_category' => ['post1' => 'Post 1'],
+    'reel_category' => ['reel1' => 'Reel 1'],
+    'video_category' => ['videocat1' => 'Video Category 1'],
     'admin_email' => 'webdeveloper9.intelliworkz@gmail.com',
 
     //'brochure_category' => ['brochure1' => 'Brochure 1', 'brochure2' => 'Brochure 2'],

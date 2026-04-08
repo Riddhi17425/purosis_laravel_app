@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\AdminPurchaseOrderMail;
+use App\Mail\DistributorPurchaseOrderMail;
 use Illuminate\Http\Request;
 use App\Models\{Cart, Product, Address, Order, OrderProduct, SupportMessageInquiry};
 use App\Services\LocationTrackerService;
@@ -10,6 +12,8 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Auth;
+use Exception;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class DistributorController extends Controller
@@ -336,6 +340,10 @@ class DistributorController extends Controller
 
     public function proceedToCheckout(Request $request){
         $distributorId = Auth::guard('distributor-api')->id();
+        $distributor = Auth::guard('distributor-api')->user();
+        $adminEmail = config('global_values.admin_email');
+
+
         $transportationTypes = config('global_values.transportation_types');
 
         // Determine if it's a Buy Now (direct) or Cart-based checkout
@@ -457,7 +465,16 @@ class DistributorController extends Controller
             }
             $deleteQuery->delete();
         }
+        // this for location tracking where to buying orders
         $this->locationTrackerService->track('order', 'distributor', $distributorId, $request , $order->id);
+
+        // Send order confirmation email to distributor
+        try {
+            Mail::to($distributor->email)->send(new DistributorPurchaseOrderMail($order));
+            Mail::to($adminEmail)->send(new AdminPurchaseOrderMail($order));
+        } catch (Exception $e) {
+            Log::error('Distributor Purchase Order email sending failed: '.$e->getMessage());
+        }
 
         return response()->json([
             'success' => true,
