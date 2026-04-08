@@ -125,7 +125,7 @@ class DistributorController extends Controller
             'mobile_no' => 'required|digits_between:10,15',
             'email_address' => 'required|email|max:255',
             'is_shipping' => 'required|in:0,1',
-            'shipping_address' => 'required_if:is_shipping,1',
+            'shipping_address' => 'nullable|required_if:is_shipping,1',
         ],[
             'dealer_name.string' => 'Dealer name must be a valid string.',
             'dealer_name.max' => 'Dealer name cannot exceed 255 characters.',
@@ -577,8 +577,9 @@ class DistributorController extends Controller
 
     public function deleteCart(Request $request){
         $validator = Validator::make($request->all(), [
-            'cart_ids' => 'required|array',
-            'cart_ids.*' => 'exists:carts,id',
+            // 'cart_ids' => 'required|array',
+            // 'cart_ids.*' => 'exists:carts,id',
+            'cart_id' => 'required|exists:carts,id',
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -589,9 +590,9 @@ class DistributorController extends Controller
         }
 
         $distributorId = Auth::guard('distributor-api')->id();
-        $checkExists = Cart::where('distributor_id', $distributorId)->whereIn('id', $request->cart_ids)->get();
-        if ($checkExists->isNotEmpty()) {
-            $checkExists->each->delete();
+        $checkExists = Cart::where('distributor_id', $distributorId)->where('id', $request->cart_id)->first();
+        if ($checkExists) {
+            $checkExists->delete();
            
             return response()->json([
                 'success' => true,

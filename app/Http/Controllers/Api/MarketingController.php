@@ -12,11 +12,12 @@ use Illuminate\Support\Facades\Validator;
 class MarketingController extends Controller
 {
     public function addUpdateBrochure(Request $request){
-        $brochureCategories = config('global_values.brochure_category');
+        //$brochureCategories = config('global_values.brochure_category');
         $validator = Validator::make($request->all(), [
             'brochure_id' => 'nullable|exists:brochures,id',
             'title' => 'required',
-            'category' => 'required|in:' . implode(',', array_keys($brochureCategories)),
+            //'category' => 'required|in:' . implode(',', array_keys($brochureCategories)),
+            'category' => 'required|exists:products,id',
             'media_file' => 'required_without:brochure_id|file|mimes:pdf|max:2048',
             'month' => 'nullable',
             'year' => 'nullable',
@@ -26,6 +27,7 @@ class MarketingController extends Controller
             'brochure_id.exists' => 'The selected brochure is invalid.',
             'title.required' => 'The title field is required.',
             'category.required' => 'Please select a category.',
+            'category.exists' => 'The selected category is invalid.',
             'media_file.required_without' => 'Please upload a PDF file.',
             'media_file.file' => 'The uploaded file must be a valid file.',
             'media_file.mimes' => 'Only PDF files are allowed.',
@@ -94,7 +96,7 @@ class MarketingController extends Controller
             ]);
         }
 
-        $brochures = Brochure::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured');
+        $brochures = Brochure::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured')->with('category:id,product_name');
         if(isset($request->brochure_id) && $request->brochure_id != ''){
             $brochures = $brochures->where('id', $request->brochure_id);
         }
@@ -118,12 +120,13 @@ class MarketingController extends Controller
     }
 
     public function addUpdateVideo(Request $request){
-        $videoCategories = config('global_values.video_category');
+        //$videoCategories = config('global_values.video_category');
         $videoTypes = config('global_values.video_type');
         $validator = Validator::make($request->all(), [
             'video_id' => 'nullable|exists:videos,id',
             'title' => 'required',
-            'category' => 'required|in:' . implode(',', array_keys($videoCategories)),
+            //'category' => 'required|in:' . implode(',', array_keys($videoCategories)),
+            'category' => 'required|exists:products,id',
             'type' => 'required|in:' . implode(',', array_keys($videoTypes)),
             'media_file' => 'required_without:video_id|mimes:jpeg,png,jpg,webp,mp4,avi,mov,mkv|max:4096',
             'thumbnail_image' => 'required_without:video_id|mimes:jpeg,png,jpg,webp|max:2048',
@@ -132,9 +135,10 @@ class MarketingController extends Controller
             'description' => 'required|max:1000',
             'is_featured' => 'nullable|in:0,1',
         ], [
-            'video_id.exists' => 'The selected brochure is invalid.',
+            'video_id.exists' => 'The selected video is invalid.',
             'title.required' => 'The title field is required.',
             'category.required' => 'Please select a category.',
+            'category.exists' => 'The selected category is invalid.',
             'media_file.required_without' => 'Please upload a Image file.',
             'media_file.file' => 'The uploaded file must be a valid file.',
             'media_file.mimes' => 'Only Image files are allowed.',
@@ -226,7 +230,7 @@ class MarketingController extends Controller
             ]);
         }
 
-        $videos = Video::select('id', 'title', 'category', 'type', 'media_file', 'thumbnail_image', 'month', 'year', 'description', 'is_featured');
+        $videos = Video::select('id', 'title', 'category', 'type', 'media_file', 'thumbnail_image', 'month', 'year', 'description', 'is_featured')->with('category:id,product_name');
         if(isset($request->video_id) && $request->video_id != ''){
             $videos = $videos->where('id', $request->video_id);
         }
@@ -252,11 +256,12 @@ class MarketingController extends Controller
     }
 
     public function addUpdateLeaflet(Request $request){
-        $leafletCategories = config('global_values.leaflet_category');
+        //$leafletCategories = config('global_values.leaflet_category');
         $validator = Validator::make($request->all(), [
             'leaflet_id' => 'nullable|exists:leaflets,id',
             'title' => 'required',
-            'category' => 'required|in:' . implode(',', array_keys($leafletCategories)),
+            //'category' => 'required|in:' . implode(',', array_keys($leafletCategories)),
+            'category' => 'required|exists:products,id',
             'media_file'     => 'required_without:leaflet_id|array|min:1',       
             'media_file.*'   => 'required_without:leaflet_id|image|mimes:jpeg,png,jpg,webp|max:2048',
             'month' => 'nullable',
@@ -267,6 +272,7 @@ class MarketingController extends Controller
             'leaflet_id.exists' => 'The selected leaflet is invalid.',
             'title.required' => 'The title field is required.',
             'category.required' => 'Please select a category.',
+            'category.exists' => 'The selected category is invalid.',
             'media_file.required_without'    => 'Please upload at least one PDF file.',
             'media_file.array'       => 'Media files must be sent as an array.',
             'media_file.min'         => 'Please upload at least one PDF file.',
@@ -343,13 +349,10 @@ class MarketingController extends Controller
             ]);
         }
 
-        $leaflets = Leaflet::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured');
+        $leaflets = Leaflet::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured')->with('category:id,product_name');
         if (isset($request->leaflet_id) && $request->leaflet_id != '') {
             $leaflets = $leaflets->where('id', $request->leaflet_id);
         }
-
-        
-        
         $leaflets = $leaflets->get();
         if ($leaflets->isEmpty()) {
             return response()->json([

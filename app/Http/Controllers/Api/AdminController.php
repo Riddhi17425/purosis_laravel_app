@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use App\Models\{Admin, Distributor, Order, Product, Brochure, Video, Leaflet, Post, Reel, Dealer, Setting, Banner, SupportMessageInquiry, UserActivityLocation};
 use Auth;
+use Illuminate\Validation\Rule;
 use App\Services\LocationTrackerService;
 use App\Services\OtpTransactionService;
 
@@ -184,12 +185,12 @@ class AdminController extends Controller
             'company_name' => 'nullable|string|max:255',
             'email' => 'required|email',
             //'phone_no' => 'required|digits_between:10,15',
-            'whatsapp_no' => 'required|digits_between:10,15',
+            'whatsapp_no' => 'nullable|digits_between:10,15',
             'gst_number' => 'nullable',
             'area' => 'nullable|string',
-            'billing_address' => 'required',
-            'shipping_address_line' => 'required',
-            'shipping_address_pincode' => 'required',
+            'billing_address' => 'nullable',
+            'shipping_address_line' => 'nullable',
+            'shipping_address_pincode' => 'nullable',
             'phone_no' => [
                 'required',
                 'digits_between:10,15',
@@ -208,11 +209,11 @@ class AdminController extends Controller
             'email.email' => 'Please enter a valid email address.',
             'phone_no.required' => 'The mobile number field is required.',
             'phone_no.digits_between' => 'Mobile number must be between 10 and 15 digits.',
-            'whatsapp_no.required' => 'The WhatsApp number field is required.',
+            //'whatsapp_no.required' => 'The WhatsApp number field is required.',
             'whatsapp_no.digits_between' => 'WhatsApp number must be between 10 and 15 digits.',
-            'billing_address.required' => 'The billing address field is required.',
-            'shipping_address_line.required' => 'The shipping address field is required.',
-            'shipping_address_pincode.required' => 'The shipping pincode field is required.',
+            //'billing_address.required' => 'The billing address field is required.',
+            //'shipping_address_line.required' => 'The shipping address field is required.',
+            //'shipping_address_pincode.required' => 'The shipping pincode field is required.',
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -284,7 +285,7 @@ class AdminController extends Controller
             ]);
         }
 
-        $distributor = Distributor::select('id', 'name', 'email', 'phone_no', 'whatsapp_no', 'gst_number', 'area', 'billing_address', 'shipping_address_line', 'shipping_address_pincode', 'is_active');
+        $distributor = Distributor::select('id', 'name', 'company_name', 'email', 'phone_no', 'whatsapp_no', 'gst_number', 'area', 'billing_address', 'shipping_address_line', 'shipping_address_pincode', 'is_active', 'alternate_mobile_no', 'landline_no', 'logo');
         if(isset($request->distributor_id) && $request->distributor_id != ''){
             $distributor = $distributor->where('id', $request->distributor_id);
         }
@@ -294,6 +295,10 @@ class AdminController extends Controller
                 $val->total_orders = Order::where('distributor_id', $val->id)->count();
                 $val->assets_downloaded = 0; //NEED TO MAKE DYNAMIC
                 $val->last_active = 0; //NEED TO MAKE DYNAMIC LIKE 2 DAYS ago 30 minutes ago
+
+                if($val->logo){
+                    $val->logo = asset('images/profile/'.$val->logo);
+                }
             }
         }
         
@@ -618,10 +623,10 @@ class AdminController extends Controller
             ]);
         }
 
-        if ($request->action === 'approve') {
+        if ($request->action === 'approved') {
             $order->status = 'confirmed';
             $order->shipping_status = 'approved';
-        } else if ($request->action === 'decline') {
+        } else if ($request->action === 'declined') {
             $order->status = 'declined';
             $order->shipping_status = 'declined';
         } else {
