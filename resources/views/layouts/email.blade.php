@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PUROSIS</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, sans-serif;">
+<body style="margin: 5; padding:5; background-color: #f4f4f4; font-family: Arial, sans-serif;">
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f4;">
         <tr>
             <td align="center" style="padding: 20px 0;">

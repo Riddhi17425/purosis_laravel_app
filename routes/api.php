@@ -102,7 +102,7 @@ Route::middleware('auth:distributor-api')->prefix('distributor')->group(function
     Route::get('get-addresses', [DistributorController::class, 'getAddresses']);
     Route::post('update-profile', [DistributorController::class, 'updateProfile']);
     Route::post('support-message-inquiry', [DistributorController::class, 'supportMessageInquiry']);
-    
+    Route::get('get-notifications', [DistributorController::class, 'getNotifications']);
 
 }); 
 

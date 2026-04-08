@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\AdminPurchaseOrderMail;
 use App\Mail\DistributorPurchaseOrderMail;
 use Illuminate\Http\Request;
-use App\Models\{Cart, Product, Address, Order, OrderProduct, SupportMessageInquiry};
+use App\Models\{Cart, Product, Address, Order, OrderProduct, SupportMessageInquiry, DistributorNotification};
 use App\Services\LocationTrackerService;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
@@ -468,6 +468,14 @@ class DistributorController extends Controller
         // this for location tracking where to buying orders
         $this->locationTrackerService->track('order', 'distributor', $distributorId, $request , $order->id);
 
+        // Store notification for the distributor
+        DistributorNotification::create([
+            'distributor_id' => $distributorId,
+            'order_id'       => $order->id,
+            'title'          => 'Order #' . $order->order_number . ' Confirmed',
+            'message'        => 'Your order has been placed successfully and is being processed.',
+        ]);
+
         // Send order confirmation email to distributor
         try {
             Mail::to($distributor->email)->send(new DistributorPurchaseOrderMail($order));
@@ -606,6 +614,47 @@ class DistributorController extends Controller
         }
     }
     
+    public function getNotifications(Request $request){
+        $distributorId = Auth::guard('distributor-api')->id();
+
+        $notifications = DistributorNotification::where('distributor_id', $distributorId)
+            ->orderBy('id', 'desc')
+            ->get()
+            ->map(function ($notification) {
+                return [
+                    'id'         => $notification->id,
+                    'order_id'   => $notification->order_id,
+                    'title'      => $notification->title,
+                    'message'    => $notification->message,
+                    'is_read'    => (bool) $notification->is_read,
+                    'time'       => $notification->created_at->format('M d, Y • h:i A'),
+                ];
+            });
+
+        // $unreadCount = DistributorNotification::where('distributor_id', $distributorId)
+        //     ->where('is_read', false)
+        //     ->count();
+
+        // Mark all as read
+        DistributorNotification::where('distributor_id', $distributorId)
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
+
+        if(isset($notifications) && is_countable($notifications) && count($notifications) > 0){
+            return response()->json([
+                'success'      => true,
+                'message'      => 'Notifications fetched successfully.',
+                //'unread_count' => $unreadCount,
+                'data'         => $notifications,
+            ]);
+        }else{  
+            return response()->json([
+                'success'      => false,
+                'message'      => 'Notifications are not available.',
+            ]);
+        }
+    }
+
     public function supportMessageInquiry(Request $request){
         $validator = Validator::make($request->all(), [
             'subject' => 'required|string|max:500',

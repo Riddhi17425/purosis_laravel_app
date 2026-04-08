@@ -82,7 +82,8 @@ class UserController extends Controller
         $validator = Validator::make($request->all(), [
             'user_type' => 'required|in:' . implode(',', $userType),
             'phone_no' => 'required',
-            'otp' => 'required'
+            'otp' => 'required',
+            'device_token' => 'nullable|string'
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -123,7 +124,8 @@ class UserController extends Controller
         // Clear OTP after success
         $user->update([
             'otp' => null,
-            'otp_expires_at' => null
+            'otp_expires_at' => null,
+            'device_token' => $request->device_token ?? null
         ],);
 
         $user->token = $token;
@@ -561,6 +563,7 @@ class UserController extends Controller
         $data['video_type'] = $this->formatKeyValue(config('global_values.video_type'));
         $data['user_types'] = config('global_values.user_types');
         $data['shipping_status'] = $this->formatKeyValue(config('global_values.shipping_status'));
+        $data['products'] = Product::select('id', 'product_name')->get();
 
         return response()->json([
             'success' => true,
