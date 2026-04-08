@@ -21,7 +21,7 @@ class OtpTransactionService
      */
     public static function buildMessage($otp): string
     {
-        return  "Your OTP for mobile number verification is {$otp} on Purosis.com. Do not share it with anyone. - Purosis";    
+        return  "Your OTP for login to Purosis App is {$otp}. Do not share this OTP with anyone. It is valid for 10 minutes.";    
     }
 
     /**
