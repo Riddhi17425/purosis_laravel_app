@@ -82,10 +82,11 @@ class DistributorController extends Controller
                         if (!empty($img['images'])) {
                             if (is_array($img['images'])) {
                                 $images = collect($img['images'])->map(function ($image) {
-                                    return url('images/product_images/' . $image);
+                                    return filter_var($image, FILTER_VALIDATE_URL) ? $image : url('images/product_images/' . $image);
                                 })->toArray();
                             } else {
-                                $images[] = url('images/product_images/' . $img['images']);
+                                $imgPath = $img['images'];
+                                $images[] = filter_var($imgPath, FILTER_VALIDATE_URL) ? $imgPath : url('images/product_images/' . $imgPath);
                             }
                         }
                         return [
@@ -476,6 +477,10 @@ class DistributorController extends Controller
             'message'        => 'Your order has been placed successfully and is being processed.',
         ]);
 
+        // SEND FIREBASE NOTIFICATION
+        //composer require google/apiclient
+
+
         // Send order confirmation email to distributor
         try {
             Mail::to($distributor->email)->send(new DistributorPurchaseOrderMail($order));
@@ -627,7 +632,7 @@ class DistributorController extends Controller
                     'title'      => $notification->title,
                     'message'    => $notification->message,
                     'is_read'    => (bool) $notification->is_read,
-                    'time'       => $notification->created_at->format('M d, Y • h:i A'),
+                    'time'       => $notification->created_at,
                 ];
             });
 

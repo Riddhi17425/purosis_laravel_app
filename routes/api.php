@@ -85,7 +85,11 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
     Route::post('add-update-reel', [ReelController::class, 'addUpdateReel']);
     Route::get('get-reels', [ReelController::class, 'getReels']);
     Route::post('stock-inward', [PromotionalStockController::class, 'stockInward']);
+    Route::post('update-stock', [PromotionalStockController::class, 'updateStock']);
+    Route::post('delete-stock', [PromotionalStockController::class, 'deleteStock']);
     Route::Post('user-activity-logs', [AdminController::class, 'userActivityLogs']);    
+    
+    Route::get('get-stock-details', [PromotionalStockController::class, 'getStockDetails']);
 
 });
 

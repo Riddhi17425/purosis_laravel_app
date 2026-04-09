@@ -125,8 +125,12 @@ class UserController extends Controller
         $user->update([
             'otp' => null,
             'otp_expires_at' => null,
-            'device_token' => $request->device_token ?? null
+            
         ],);
+        if(isset($request->user_type) && strtolower($request->user_type) == 'distributor'){
+            $user->device_token = $request->device_token ?? null;
+            $user->save();
+        }
 
         $user->token = $token;
         $user->role = $request->user_type;

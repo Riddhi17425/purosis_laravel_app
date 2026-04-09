@@ -111,4 +111,122 @@ class PromotionalStockController extends Controller
             'data' => $promotionalStockTransaction
         ]);
     }
+
+    public function updateStock(Request $request){
+        $validator = Validator::make($request->all(), [
+            'item_id' => 'required|exists:promotional_stocks,id',
+            'item_name' => 'required|string|max:255',
+            'qty' => 'required',
+            'notes' => 'nullable|max:700',
+        ], [
+            'item_id.required' => 'Item id is required.',
+            'item_id.exists' => 'Selected item does not exist.',
+            'item_name.required' => 'Item name is required.',
+            'item_name.string' => 'Item name must be a string.',
+            'item_name.max' => 'Item name may not be greater than 255 characters.',
+
+            'qty.required' => 'Quantity is required.',
+            'notes.max' => 'Notes may not be greater than 700 characters.',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $promotionalStock = PromotionalStock::find($request->item_id);
+        $promotionalStock->qty = $request->qty;
+        $promotionalStock->item_name = $request->item_name ?? null;
+        $promotionalStock->notes = $request->notes ?? null;
+        $promotionalStock->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Promotional Stock updated Successfully',
+            'data' => $promotionalStock
+        ]);
+    }
+
+    public function deleteStock(Request $request){
+        $validator = Validator::make($request->all(), [
+            'item_id' => 'required|exists:promotional_stocks,id',
+        ], [
+            'item_id.required' => 'Item id is required.',
+            'item_id.exists' => 'Selected item does not exist.',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $promotionalStock = PromotionalStock::where('id', $request->item_id)->first();
+        if(isset($promotionalStock) && $promotionalStock != null){
+            $promotionalStock->delete();
+            return response()->json([
+                'success' => true,
+                'message' => 'Promotional Stock deleted Successfully',
+            ]);
+        }else{
+           return response()->json([
+                'success' => true,
+                'message' => 'Promotional Stock not Found',
+            ]); 
+        }
+    }
+
+    public function getStockDetails(Request $request){
+        $validator = Validator::make($request->all(), [
+            'type' => 'required|in:items,transactions',
+        ], [
+            'type.required' => 'Type is required.',
+            'type.in' => 'Selected type does not exist.',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        if(isset($request->type) && $request->type == 'items'){
+            $promotionalStock = PromotionalStock::whereNull('deleted_at')->get();
+            if($promotionalStock->isEmpty()){
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No Promotional Stock items found',
+                ]);
+            }else{
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Promotional Stock items retrieved Successfully',
+                    'data' => $promotionalStock
+                ]);
+            }
+        }else if(isset($request->type) && $request->type == 'transactions'){
+                $promotionalStock = PromotionalStockTransaction::with(['item', 'recipient'])->get();
+                if($promotionalStock->isEmpty()){
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No Promotional Stock transactions found',
+                    ]);
+                }else{
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Promotional Stock transactions retrieved Successfully',
+                        'data' => $promotionalStock
+                    ]); 
+                }
+        }else{
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid type provided.',
+            ]);
+        }
+    }
 }
