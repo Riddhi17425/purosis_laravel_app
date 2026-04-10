@@ -57,7 +57,7 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'OTP sent successfully',
-            'data' => $otp // remove this in production
+            //'data' => $otp // remove this in production
         ]);
     }
 

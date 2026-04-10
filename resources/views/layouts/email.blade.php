@@ -10,11 +10,11 @@
         <tr>
             <td align="center" style="padding: 20px 0;">
                 
-                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; width: 600px; max-width: 600px; border-collapse: collapse; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; width: 600px; max-width: 600px; border-collapse: collapse; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 1px solid #dddddd;">
                     
                     <tr>
                         <td align="center">
-                            <img src="{{ asset('purosis.png') }}" alt="Purosis" width="600" style="display: block; width: 100%; max-width: 600px; height: auto;">
+                            <img src="{{ asset('/images/mailer_header.jpg') }}" alt="Purosis" width="600" style="display: block; width: 100%; max-width: 600px; height: auto;">
                         </td>
                     </tr>
 
@@ -28,9 +28,9 @@
                             <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
                                     <td align="center" style="font-family: Arial, sans-serif; font-size: 15px; color: #ffffff;">
-                                        <span style="display: inline-block; vertical-align: middle; color: #ffffff;"><img src="{{asset('public/images/emails-emails.png')}}"> info@purosis.com</span>
+                                        <span style="display: inline-block; vertical-align: middle; color: #ffffff;"><img src="{{asset('/images/emails-emails.png')}}"> info@purosis.com</span>
                                         <span style="display: inline-block; color: #666666; margin: 0 15px; vertical-align: middle;">|</span>
-                                        <a href="tel:+917940308678" style="display: inline-block; vertical-align: middle; color: #ffffff;"><img src="{{asset('public/images/emails-phone.png')}}"> +91 7940308678</a>
+                                        <a href="tel:+917940308678" style="display: inline-block; vertical-align: middle; color: #ffffff;"><img src="{{asset('/images/emails-phone.png')}}"> +91 7940308678</a>
                                     </td>
                                 </tr>
                             </table>

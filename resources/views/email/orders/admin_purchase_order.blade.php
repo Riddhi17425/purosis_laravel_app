@@ -1,128 +1,122 @@
 @extends('layouts.email')
 
 @section('content')
-    <p style="font-size: 16px; color: #333;">Hello Admin,</p>
 
-    <p style="font-size: 15px; color: #555;">
-        A new purchase order has been placed successfully. Please find the details below:
-    </p>
+<tr>
+    <td style="padding: 40px;">
+        <h1 style="margin: 0 0 10px 0; font-family: 'Times New Roman', Times, serif; font-size: 28px; color: #222222; font-weight: bold;">Hello Admin,</h1>
+        <p style="margin: 0 0 40px 0; font-family: Arial, sans-serif; font-size: 16px; color: #777777;">A new purchase order has been placed successfully. Please find the details below:</p>
 
-    <h3 style="margin-top: 25px; color: #111827;">Order Information</h3>
-    <table width="100%" cellpadding="8" cellspacing="0" style="margin-bottom: 20px; border-collapse: collapse;">
-        <tr>
-            <td width="35%"><strong>Order Number:</strong></td>
-            <td>{{ $order->order_number ?? ('#'.$order->id) }}</td>
-        </tr>
-        <tr>
-            <td><strong>Order Date:</strong></td>
-            <td>{{ \Carbon\Carbon::parse($order->created_at)->format('d M Y h:i A') }}</td>
-        </tr>
-        <tr>
-            <td><strong>Transportation Type:</strong></td>
-            <td>{{ ucfirst($order->type ?? '-') }}</td>
-        </tr>
-        <tr>
-            <td><strong>Status:</strong></td>
-            <td>{{ ucfirst($order->status ?? '-') }}</td>
-        </tr>
-        <tr>
-            <td><strong>Total Weight:</strong></td>
-            <td>{{ number_format($order->total_weight ?? 0, 2) }}</td>
-        </tr>
-        <tr>
-            <td><strong>Total CBM:</strong></td>
-            <td>{{ number_format($order->total_cbm ?? 0, 2) }}</td>
-        </tr>
-        @if(!empty($order->remarks))
-        <tr>
-            <td><strong>Remarks:</strong></td>
-            <td>{{ $order->remarks }}</td>
-        </tr>
-        @endif
-    </table>
-
-    <h3 style="margin-top: 25px; color: #111827;">Distributor Details</h3>
-    <table width="100%" cellpadding="8" cellspacing="0" style="margin-bottom: 20px; border-collapse: collapse;">
-        <tr>
-            <td width="35%"><strong>Name:</strong></td>
-            <td>{{ $order->distributor->name ?? $order->distributor->full_name ?? '-' }}</td>
-        </tr>
-        <tr>
-            <td><strong>Email:</strong></td>
-            <td>{{ $order->distributor->email ?? '-' }}</td>
-        </tr>
-        <tr>
-            <td><strong>Phone:</strong></td>
-            <td>{{ $order->distributor->phone_no ?? '-' }}</td>
-        </tr>
-    </table>
-
-    <h3 style="margin-top: 25px; color: #111827;">Billing Address</h3>
-    <table width="100%" cellpadding="8" cellspacing="0" style="margin-bottom: 20px; border-collapse: collapse;">
-        <tr>
-            <td>
-                {{ $order->billingAddress->address_line_1 ?? $order->billingAddress->address ?? '-' }}<br>
-                {{ $order->billingAddress->address_line_2 ?? '' }}
-                @if(!empty($order->billingAddress->city)), {{ $order->billingAddress->city }} @endif
-                @if(!empty($order->billingAddress->state)), {{ $order->billingAddress->state }} @endif
-                @if(!empty($order->billingAddress->country)), {{ $order->billingAddress->country }} @endif
-                @if(!empty($order->billingAddress->pincode)) - {{ $order->billingAddress->pincode }} @endif
-            </td>
-        </tr>
-    </table>
-
-    <h3 style="margin-top: 25px; color: #111827;">Shipping Address</h3>
-    <table width="100%" cellpadding="8" cellspacing="0" style="margin-bottom: 20px; border-collapse: collapse;">
-        <tr>
-            <td>
-                {{ $order->shippingAddress->address_line_1 ?? $order->shippingAddress->address ?? '-' }}<br>
-                {{ $order->shippingAddress->address_line_2 ?? '' }}
-                @if(!empty($order->shippingAddress->city)), {{ $order->shippingAddress->city }} @endif
-                @if(!empty($order->shippingAddress->state)), {{ $order->shippingAddress->state }} @endif
-                @if(!empty($order->shippingAddress->country)), {{ $order->shippingAddress->country }} @endif
-                @if(!empty($order->shippingAddress->pincode)) - {{ $order->shippingAddress->pincode }} @endif
-            </td>
-        </tr>
-    </table>
-
-    <h3 style="margin-top: 25px; color: #111827;">Order Items</h3>
-    <table width="100%" cellpadding="10" cellspacing="0" border="1" style="border-collapse: collapse; width: 100%; border: 1px solid #ddd; margin-bottom: 20px;">
-        <thead style="background-color: #f3f4f6;">
+        <h3 style="margin: 0 0 10px 0; font-family: Arial, sans-serif; font-size: 15px; font-weight: bold; color: #ffffff; background-color: #222222; padding: 10px 15px; border-radius: 4px; letter-spacing: 0.5px;">Order Information</h3>
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"
+            style="border-collapse: collapse;">
             <tr>
-                <th align="left">#</th>
-                <th align="left">Product</th>
-                <th align="left">Color</th>
-                <th align="left">Qty</th>
-                <th align="left">Price</th>
-                <th align="left">Weight</th>
-                <th align="left">CBM</th>
+                <td width="35%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #888888;">Order Number:</td>
+                <td width="65%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #555555;">{{ $order->order_number ?? ('#'.$order->id) }}</td>
             </tr>
-        </thead>
-        <tbody>
-            @forelse($order->orderProducts as $key => $item)
-                <tr>
-                    <td>{{ $key + 1 }}</td>
-                    <td>{{  $item->product->product_name ?? '-' }}</td>
-                    <td>{{ $item->color_code ?? '-' }}</td>
-                    <td>{{ $item->qty ?? 0 }}</td>
-                    <td>₹{{ number_format($item->price ?? 0, 2) }}</td>
-                    <td>{{ number_format($item->total_weight ?? 0, 2) }}</td>
-                    <td>{{ number_format($item->total_cbm ?? 0, 2) }}</td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="7" align="center">No order items found.</td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
+            <tr>
+                <td width="35%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #888888;">Order Date:</td>
+                <td width="65%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #555555;">{{ \Carbon\Carbon::parse($order->created_at)->format('d M Y h:i A') }}</td>
+            </tr>
+            <tr>
+                <td width="35%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #888888;">Transportation Type:</td>
+                <td width="65%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #555555;">{{ ucfirst($order->type ?? '-') }}</td>
+            </tr>
+            <tr>
+                <td width="35%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #888888;">Status:</td>
+                <td width="65%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #555555;">{{ ucfirst($order->status ?? '-') }}</td>
+            </tr>
+            <tr>
+                <td width="35%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #888888;">Total Weight:</td>
+                <td width="65%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #555555;">{{$order->total_weight ?? null }}</td>
+            </tr>
+            <tr>
+                <td width="35%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #888888;">Total CBM:</td>
+                <td width="65%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #555555;">{{ $order->total_cbm ?? null }}</td>
+            </tr>
+            @if(!empty($order->remarks))
+            <tr>
+                <td width="35%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #888888;">Remarks:</td>
+                <td width="65%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #555555;">{{ $order->remarks ?? '-' }}</td>
+            </tr>
+            @endif
+        </table>
 
-    <p style="margin-top: 25px; font-size: 15px; color: #555;">
-        Please review this order in the admin panel.
-    </p>
+        <h3 style="margin: 30px 0 10px 0; font-family: Arial, sans-serif; font-size: 15px; font-weight: bold; color: #ffffff; background-color: #222222; padding: 10px 15px; border-radius: 4px; letter-spacing: 0.5px;">Distributor Details</h3>
 
-    <p style="margin-top: 25px; font-size: 15px; color: #333;">
-        Regards,<br>
-        {{ config('app.name') }}
-    </p>
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"
+            style="border-collapse: collapse;">
+            <tr>
+                <td width="35%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #888888;">Name:</td>
+                <td width="65%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #555555;">{{ $order->distributor->name ?? $order->distributor->full_name ?? '-' }}</td>
+            </tr>
+            <tr>
+                <td width="35%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #888888;">Email:</td>
+                <td width="65%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #555555;">{{ $order->distributor->email ?? '-' }}</td>
+            </tr>
+            <tr>
+                <td width="35%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #888888;">Phone:</td>
+                <td width="65%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #555555;">{{ $order->distributor->phone_no ?? '-' }}</td>
+            </tr>
+        </table>
+
+        <h3 style="margin: 30px 0 10px 0; font-family: Arial, sans-serif; font-size: 15px; font-weight: bold; color: #ffffff; background-color: #222222; padding: 10px 15px; border-radius: 4px; letter-spacing: 0.5px;">Billing Address</h3>
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"
+                style="border-collapse: collapse;">
+                <tr>
+                    <td width="100%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #555555;"> {{ $order->billingAddress->address_line_1 ?? $order->billingAddress->address ?? '-' }}
+                    {{ $order->billingAddress->address_line_2 ?? '' }}
+                    @if(!empty($order->billingAddress->city)), {{ $order->billingAddress->city }} @endif
+                    @if(!empty($order->billingAddress->state)), {{ $order->billingAddress->state }} @endif
+                    @if(!empty($order->billingAddress->country)), {{ $order->billingAddress->country }} @endif
+                    @if(!empty($order->billingAddress->pincode)) - {{ $order->billingAddress->pincode }} @endif</td>
+                </tr>
+            </table>
+
+        <h3 style="margin: 30px 0 10px 0; font-family: Arial, sans-serif; font-size: 15px; font-weight: bold; color: #ffffff; background-color: #222222; padding: 10px 15px; border-radius: 4px; letter-spacing: 0.5px;">Shipping Address</h3>
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">
+                <tr>
+                    <td width="100%" style="border: 1px solid #dddddd; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; color: #555555;"> {{ $order->shippingAddress->address_line_1 ?? $order->shippingAddress->address ?? '-' }}
+                    {{ $order->shippingAddress->address_line_2 ?? '' }}
+                    @if(!empty($order->shippingAddress->city)), {{ $order->shippingAddress->city }} @endif
+                    @if(!empty($order->shippingAddress->state)), {{ $order->shippingAddress->state }} @endif
+                    @if(!empty($order->shippingAddress->country)), {{ $order->shippingAddress->country }} @endif
+                    @if(!empty($order->shippingAddress->pincode)) - {{ $order->shippingAddress->pincode }} @endif</td>
+                </tr>
+            </table>
+
+        <h3 style="margin: 30px 0 10px 0; font-family: Arial, sans-serif; font-size: 15px; font-weight: bold; color: #ffffff; background-color: #222222; padding: 10px 15px; border-radius: 4px; letter-spacing: 0.5px;">Order Items</h3>
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #f0f0f0;">
+                        <th align="left" style="font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; color: #333333; padding: 10px 12px; border: 1px solid #dddddd;">#</th>
+                        <th align="left" style="font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; color: #333333; padding: 10px 12px; border: 1px solid #dddddd;">Product</th>
+                        <th align="left" style="font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; color: #333333; padding: 10px 12px; border: 1px solid #dddddd;">Color</th>
+                        <th align="left" style="font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; color: #333333; padding: 10px 12px; border: 1px solid #dddddd;">Qty</th>
+                        {{-- <th align="left" style="font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; color: #333333; padding: 10px 12px; border: 1px solid #dddddd;">Price</th> --}}
+                        <th align="left" style="font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; color: #333333; padding: 10px 12px; border: 1px solid #dddddd;">Weight</th>
+                        <th align="left" style="font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; color: #333333; padding: 10px 12px; border: 1px solid #dddddd;">CBM</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($order->orderProducts as $key => $item)
+                        <tr>
+                            <td style="font-family: Arial, sans-serif; font-size: 14px; color: #555555; padding: 10px; border: 1px solid #ddd;">{{ $key + 1 }}</td>
+                            <td style="font-family: Arial, sans-serif; font-size: 14px; color: #555555; padding: 10px; border: 1px solid #ddd;">{{ $item->product->product_name ?? '-' }}</td>
+                            <td style="font-family: Arial, sans-serif; font-size: 14px; color: #555555; padding: 10px; border: 1px solid #ddd;">{{ $item->color_code ?? '-' }}</td>
+                            <td style="font-family: Arial, sans-serif; font-size: 14px; color: #555555; padding: 10px; border: 1px solid #ddd;">{{ $item->qty ?? 0 }}</td>
+                            {{-- <td style="font-family: Arial, sans-serif; font-size: 14px; color: #555555; padding: 10px; border: 1px solid #ddd;">₹{{ number_format($item->price ?? 0, 2) }}</td> --}}
+                            <td style="font-family: Arial, sans-serif; font-size: 14px; color: #555555; padding: 10px; border: 1px solid #ddd;">{{ $item->total_weight ?? null }}</td>
+                            <td style="font-family: Arial, sans-serif; font-size: 14px; color: #555555; padding: 10px; border: 1px solid #ddd;">{{ $item->total_cbm ?? null }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" align="center" style="font-family: Arial, sans-serif; font-size: 14px; color: #888888; padding: 15px; border: 1px solid #ddd;">No order items found.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+
+    </td>
+</tr>
 @endsection

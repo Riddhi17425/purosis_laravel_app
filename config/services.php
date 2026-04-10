@@ -41,4 +41,9 @@ return [
         'expiry_minutes' => env('SHREE_SMS_EXPIRY_MINUTES', 10),
     ],
 
+    'firebase' => [
+        'project_id'       => env('FIREBASE_PROJECT_ID'),
+        'credentials_path' => env('FIREBASE_CREDENTIALS_PATH') ?: storage_path('app/firebase-service-account.json'),
+    ],
+
 ];

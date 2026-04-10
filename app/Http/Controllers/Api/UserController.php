@@ -12,15 +12,21 @@ use App\Services\OtpTransactionService;
 use DB;
 use Auth;
 
+use App\Services\FirebaseNotificationService;
+
+
 class UserController extends Controller
 {
     protected $locationTrackerService;
     protected $otpTransactionService;
 
-    public function __construct(LocationTrackerService $locationTrackerService, OtpTransactionService $otpTransactionService)
+    protected $firebaseNotificationService;
+
+    public function __construct(LocationTrackerService $locationTrackerService, OtpTransactionService $otpTransactionService, FirebaseNotificationService $firebaseNotificationService)
     {
         $this->locationTrackerService = $locationTrackerService;
         $this->otpTransactionService = $otpTransactionService;
+        $this->firebaseNotificationService = $firebaseNotificationService;
     }
     public function sendUsetOtp(Request $request){
         $userType = config('global_values.user_types');
@@ -73,7 +79,7 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'OTP sent successfully',
-            'data' => $otp // remove this in production
+            //'data' => $otp 
         ]);
     }
 
@@ -203,6 +209,18 @@ class UserController extends Controller
     }
 
     public function getBrochures(Request $request){
+        // SEND FIREBASE NOTIFICATION
+        $fcmToken = 'cBJSsLfxR22pYIA5xYifEh:APA91bE2hbqt1PG31OW5q3fL9ZwLyZIwT4hETmBxXzLVoE-12boF4I3BGAAoPxNwOBgTZMjpiteYPMq-F1Cqmian8l3z9l_K6MykH18vu-zMCNZKBGYnKJQ';
+        if ($fcmToken) {
+            $this->firebaseNotificationService->sendNotification(
+                $fcmToken,
+                'Order # Confirmed',
+                'Your order has been placed successfully and is being processed.',
+                ['order_id' => (string) 1]
+            );
+        }
+
+        die;
         $validator = Validator::make($request->all(), [
             'brochure_id' => 'nullable|exists:brochures,id',
             'filter' => 'nullable'

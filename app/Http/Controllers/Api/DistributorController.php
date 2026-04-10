@@ -8,6 +8,7 @@ use App\Mail\DistributorPurchaseOrderMail;
 use Illuminate\Http\Request;
 use App\Models\{Cart, Product, Address, Order, OrderProduct, SupportMessageInquiry, DistributorNotification};
 use App\Services\LocationTrackerService;
+use App\Services\FirebaseNotificationService;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -19,9 +20,12 @@ use Illuminate\Support\Facades\Mail;
 class DistributorController extends Controller
 {
     protected $locationTrackerService;
-    public function __construct(LocationTrackerService $locationTrackerService)
+    protected $firebaseNotificationService;
+
+    public function __construct(LocationTrackerService $locationTrackerService, FirebaseNotificationService $firebaseNotificationService)
     {
-        $this->locationTrackerService = $locationTrackerService;
+        $this->locationTrackerService        = $locationTrackerService;
+        $this->firebaseNotificationService   = $firebaseNotificationService;
     }
 
     public function addToCart(Request $request){
@@ -344,7 +348,6 @@ class DistributorController extends Controller
         $distributor = Auth::guard('distributor-api')->user();
         $adminEmail = config('global_values.admin_email');
 
-
         $transportationTypes = config('global_values.transportation_types');
 
         // Determine if it's a Buy Now (direct) or Cart-based checkout
@@ -397,7 +400,7 @@ class DistributorController extends Controller
                 'product_id'     => $product->id,
                 'qty'            => $qty,
                 'color_code'     => $request->color_code,
-                'price'          => $product->price ?? null,
+                // 'price'          => $product->price ?? null,
                 'units_per_box'  => $product->units_per_box ?? null,
                 'weight_per_box' => $product->weight_per_box ?? null,
                 'total_weight'   => ($product->weight_per_box ?? 0) * $qty,
@@ -424,7 +427,7 @@ class DistributorController extends Controller
                 'product_id'     => $c->product_id,
                 'qty'            => $c->qty,
                 'color_code'     => $c->color_code,
-                'price'          => $c->price,
+                // 'price'          => $c->price,
                 'units_per_box'  => $c->units_per_box,
                 'weight_per_box' => $c->weight_per_box,
                 'total_weight'   => $c->total_weight,
@@ -478,8 +481,19 @@ class DistributorController extends Controller
         ]);
 
         // SEND FIREBASE NOTIFICATION
-        //composer require google/apiclient
-
+        try {
+            $fcmToken = $distributor->device_token ?? null;
+            if ($fcmToken) {
+                $this->firebaseNotificationService->sendNotification(
+                    $fcmToken,
+                    'Order #' . $order->order_number . ' Confirmed',
+                    'Your order has been placed successfully and is being processed.',
+                    ['order_id' => (string) $order->id]
+                );
+            }
+        } catch (Exception $e) {
+            Log::error('Distributor Purchase Order Firebase notification sending failed: '.$e->getMessage());
+        }
 
         // Send order confirmation email to distributor
         try {
@@ -688,18 +702,42 @@ class DistributorController extends Controller
             'subject'       => $supportMessage->subject ?? null,
             'message_data'       => $supportMessage->message ?? null,
         ];
-        try {
+        // try {
             Mail::send('email.admin.support_inquiry', $data, function ($message) use ($adminEmail) {
                 $message->to($adminEmail)->subject('New Support Message Inquiry');
             });
-        } catch (Exception $e) {
-            \Log::error('Support Message Inquiry sending failed: '.$e->getMessage());
-        }
+        // } catch (Exception $e) {
+        //     \Log::error('Support Message Inquiry sending failed: '.$e->getMessage());
+        // }
 
         return response()->json([
             'success' => true,
             'message' => 'Your message has been sent successfully. We will get back to you soon.',
             'data' => $supportMessage
+        ]);
+    }
+
+    public function updateFcmToken(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'fcm_token' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ]);
+        }
+
+        $distributor = Auth::guard('distributor-api')->user();
+        $distributor->fcm_token = $request->fcm_token;
+        $distributor->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'FCM token updated successfully.',
         ]);
     }
    

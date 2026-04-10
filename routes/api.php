@@ -88,7 +88,6 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
     Route::post('update-stock', [PromotionalStockController::class, 'updateStock']);
     Route::post('delete-stock', [PromotionalStockController::class, 'deleteStock']);
     Route::Post('user-activity-logs', [AdminController::class, 'userActivityLogs']);    
-    
     Route::get('get-stock-details', [PromotionalStockController::class, 'getStockDetails']);
 
 });
@@ -107,6 +106,7 @@ Route::middleware('auth:distributor-api')->prefix('distributor')->group(function
     Route::post('update-profile', [DistributorController::class, 'updateProfile']);
     Route::post('support-message-inquiry', [DistributorController::class, 'supportMessageInquiry']);
     Route::get('get-notifications', [DistributorController::class, 'getNotifications']);
+    Route::post('update-fcm-token', [DistributorController::class, 'updateFcmToken']);
 
 }); 
 

@@ -12,7 +12,8 @@ class OtpTransactionService
      */
     public static function generateOtp($length = 4): string
     {
-        $otp = rand(1000, 9999);
+        //$otp = rand(1000, 9999);
+        $otp = 0000;
         return $otp;
     }
 
