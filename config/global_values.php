@@ -9,5 +9,5 @@ return [
     'video_type' => ['product_video' => 'Product Video', 'corporate_video' => 'Corporate Video', 'influencer_video' => 'Influencer Video'],
     'user_types' => ['admin', 'distributor', 'dealer'],
     'transportation_types' => ['Full Container', 'Part Loader'],
-    'shipping_status' => ['pending' => 'Pending', 'approved' => 'Approved', 'confirmed' => 'Confirmed', 'in-process' => 'In Process', 'delivered' => 'Delivered', 'declined' => 'Declined'],
+    'shipping_status' => ['pending' => 'Pending Approval', 'approved' => 'Approved', /*'confirmed' => 'Confirmed', */'in-process' => 'In Process', 'shipped' => 'Shipped', 'delivered' => 'Delivered', 'declined' => 'Declined'],
 ];

@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('product_name')->nullable();
             $table->string('product_url')->nullable();
             $table->longText('product_description')->nullable();
-            $table->longText('product_colors_images')->nullable();
+            // $table->longText('product_colors_images')->nullable();
             $table->decimal('price', 10, 2)->nullable();
             $table->integer('units_per_box')->nullable();
             $table->decimal('weight_per_box', 8, 2)->nullable();

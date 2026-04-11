@@ -63,7 +63,7 @@ class UserController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'User not Found'
-            ], 404);
+            ]);
         }
 
         // Generate OTP using comman service 
@@ -277,6 +277,8 @@ class UserController extends Controller
     }
 
     public function getReels(Request $request){
+        
+
         $validator = Validator::make($request->all(), [
             'reel_id' => 'nullable|exists:reels,id',
             'filter' => 'nullable'

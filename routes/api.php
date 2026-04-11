@@ -72,6 +72,8 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
     Route::post('add-update-subcategory', [ProductController::class, 'addUpdateSubCategory']);
     Route::get('get-sub-categories', [ProductController::class, 'getSubcategories']);
     Route::post('add-update-product', [ProductController::class, 'addUpdateProduct']);
+    Route::post('update-product-colorimage', [ProductController::class, 'updateProductColorImage']);
+    Route::post('delete-product-colorimage', [ProductController::class, 'deleteProductColorImage']);
     Route::get('get-products', [ProductController::class, 'getProducts']);
 
     Route::post('add-update-brochure', [MarketingController::class, 'addUpdateBrochure']);

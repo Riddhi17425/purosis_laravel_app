@@ -11,9 +11,9 @@ class Product extends Model
     use HasFactory, SoftDeletes;
     protected $guarded = [];
 
-    protected $casts = [
-        'product_colors_images' => 'array', // <-- Laravel will automatically convert JSON <-> array
-    ];
+    // protected $casts = [
+    //     'product_colors_images' => 'array', // <-- Laravel will automatically convert JSON <-> array
+    // ];
 
     public function category()
     {

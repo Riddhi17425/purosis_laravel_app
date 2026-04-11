@@ -648,7 +648,7 @@ class AdminController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'order_id'        => 'required|exists:orders,id',
-            'shipping_status' => 'required|in:confirmed,in-process,delivered',
+            'shipping_status' => 'required|in:in-process,shipped,delivered',
         ]);
         if ($validator->fails()) {
             return response()->json([

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\{Category, Subcategory, Product};
+use App\Models\{Category, SubCategory, Product};
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -134,7 +134,7 @@ class ProductController extends Controller
             ]);
         }
 
-        $subcategories = Subcategory::select('id', 'category_id', 'sub_category_name')->where('category_id', $request->category_id)->get();
+        $subcategories = SubCategory::select('id', 'category_id', 'sub_category_name')->where('category_id', $request->category_id)->get();
         if(isset($subcategories) && is_countable($subcategories) && count($subcategories) > 0){
             return response()->json([
                 'success' => true,
@@ -272,6 +272,86 @@ class ProductController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Product stored Successfully',
+            'data' => $product
+        ]);
+    }
+
+    public function updateProductColorImage(Request $request){
+        $validator = Validator::make($request->all(), [
+            'product_id' => 'required|exists:products,id',
+            'color_name' => 'required|string',
+            'color_code' => 'required|string',
+            'existing_img_names' => 'nullable|array',
+            'existing_img_names.*' => 'nullable|string',
+            'color_img' => 'nullable|array',
+            'color_img.*.color_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $product = Product::find($request->product_id);
+        if (!$product) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Product not Found'
+            ]);
+        }
+
+        $path = public_path('images/product_images');
+        $existingImages = $product->product_colors_images ?? [];
+        $keepImgNames = array_filter($request->existing_img_names ?? [], fn($n) => !empty($n));
+
+        $colorFound = false;
+        foreach ($existingImages as &$img) {
+            if ($img['color_name'] == $request->color_name && $img['color_code'] == $request->color_code) {
+                $colorFound = true;
+
+                // Delete images that are no longer in existing_img_names
+                if (isset($img['images']) && is_array($img['images'])) {
+                    foreach ($img['images'] as $storedImage) {
+                        if (!empty($storedImage) && !in_array($storedImage, $keepImgNames)) {
+                            if (file_exists($path . '/' . $storedImage)) {
+                                @unlink($path . '/' . $storedImage);
+                            }
+                        }
+                    }
+                }
+
+                // Retain only the images the client wants to keep
+                $img['images'] = array_values($keepImgNames);
+
+                // Upload and append new images
+                if ($request->hasFile('color_img')) {
+                    foreach ($request->file('color_img') as $imgIndex => $imageFile) {
+                        $originalFilename = $product->id . '_' . $imgIndex . '_' . time() . '_' . $imageFile->getClientOriginalName();
+                        $imageFile->move($path, $originalFilename);
+                        $img['images'][] = $originalFilename;
+                    }
+                }
+                break;
+            }
+        }
+        unset($img);
+
+        if (!$colorFound) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Color entry not found for this product.',
+            ]);
+        }
+
+        // Save updated images array back to product
+        $product->product_colors_images = $existingImages;
+        $product->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Product color image updated Successfully',
             'data' => $product
         ]);
     }
