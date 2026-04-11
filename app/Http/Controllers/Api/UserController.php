@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{Post, Brochure, Reel, Leaflet, Subcategory, Product, Distributor, Dealer, Video, Banner, Order, PromotionalStockTransaction, Category, UserActivityLocation};
+use App\Models\{Post, Brochure, Reel, Leaflet, Subcategory, Product, ProductColor, ProductColorImage, Distributor, Dealer, Video, Banner, Order, PromotionalStockTransaction, Category, UserActivityLocation};
 use App\Services\LocationTrackerService;
 use App\Services\OtpTransactionService;
 use DB;
@@ -503,7 +503,7 @@ class UserController extends Controller
             ]);
         }
 
-        $products = Product::select('id', 'category_id', 'sub_category_id', 'product_name', 'product_description', 'product_colors_images', 'units_per_box', 'weight_per_box', 'length', 'width', 'height', 'technical_video_url', 'specifications')->with(['category:id,category_name', 'subCategory:id,category_id,sub_category_name']);
+        $products = Product::select('id', 'category_id', 'sub_category_id', 'product_name', 'product_description', 'units_per_box', 'weight_per_box', 'length', 'width', 'height', 'technical_video_url', 'specifications')->with(['category:id,category_name', 'subCategory:id,category_id,sub_category_name', 'productColors.productColorImages']);
         
         if(isset($request->product_id) && $request->product_id != ''){
             $products = $products->where('id', $request->product_id);
@@ -519,45 +519,23 @@ class UserController extends Controller
                 if (!empty($subCategories)) {
                     $products->whereIn('sub_category_id', $subCategories);
                 }
-                // if (!empty($price)) {
-                //     $products->whereIn('price', $price);
-                // }
             }
         }
         $products = $products->get();
-        // $products = $products->map(function ($product) {
-        //     $productColors = collect($product->product_colors_images ?? [])->map(function ($img) {
-        //         return [
-        //             'color_name' => $img['color_name'] ?? null,
-        //             'color_code' => $img['color_code'] ?? null,
-        //             'image' => isset($img['image']) ? url('images/product_images/' . $img['image']) : null
-        //         ];
-        //     });
-
-        //     $product->product_colors_images = $productColors;
-        //     return $product;
-        // });
         $products = $products->map(function ($product) {
-            $productColors = collect($product->product_colors_images ?? [])->map(function ($img) {
-                $images = [];
-                if (!empty($img['images'])) {
-                    // If already array
-                    if (is_array($img['images'])) {
-                        $images = collect($img['images'])->map(function ($image) {
-                            return url('images/product_images/' . $image);
-                        })->toArray();
-                    } else {
-                        // If single image (backward compatibility)
-                        $images[] = url('images/product_images/' . $img['images']);
-                    }
-                }
+            $colors = $product->productColors->map(function ($color) {
                 return [
-                    'color_name' => $img['color_name'] ?? null,
-                    'color_code' => $img['color_code'] ?? null,
-                    'images' => $images
+                    'color_name' => $color->color_name,
+                    'color_code' => $color->color_code,
+                    'images'     => $color->productColorImages->map(fn($img) => url('images/product_images/' . $img->image))->values()->toArray(),
                 ];
-            });
-            $product->product_colors_images = $productColors;
+            })->values();
+
+            $product->product_colors_images = $colors->isEmpty()
+                ? [['color_name' => null, 'color_code' => null, 'images' => []]]
+                : $colors;
+
+            unset($product->productColors);
             return $product;
         });
         

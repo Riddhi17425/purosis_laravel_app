@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\{Category, SubCategory, Product};
+use App\Models\{Category, SubCategory, Product, ProductColor, ProductColorImage};
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -170,8 +170,9 @@ class ProductController extends Controller
             'description' => 'required',
             'units_per_box' => 'required',
             'weight_per_box' => 'required', 
-            // 'product_img' => 'required|array',
-            // 'product_img.*.color_image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'product_img' => $request->product_id ? 'nullable|array' : 'required|array',
+            'product_img.*.color_image' => $request->product_id ? 'nullable' : 'required',
+            'product_img.*.color_image.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'specifications' => 'nullable'
         ], [
             'product_name.required' => 'Please enter the product name.',
@@ -206,68 +207,45 @@ class ProductController extends Controller
         $product->save();
 
         //PRODUCT IMAGES
-        $path = public_path('images/product_images');
-        $existingImages = $product->product_colors_images ? $product->product_colors_images : [];
-        $productImgArr = [];
-        if(isset($request->product_img) && is_countable($request->product_img) && count($request->product_img) > 0){
-            // If updating, delete existing images from disk
-            if ($request->product_id && count($existingImages) > 0) {
-                foreach ($existingImages as $img) {
-                    if (!empty($img['image']) && file_exists($path . '/' . $img['image'])) {
-                        @unlink($path . '/' . $img['image']);
+        if ($request->has('product_img') && is_array($request->product_img) && count($request->product_img) > 0) {
+            $path = public_path('images/product_images');
+
+            // On update, remove old colors and their images
+            if ($request->product_id) {
+                $colorIds = ProductColor::where('product_id', $product->id)->pluck('id');
+                ProductColorImage::whereIn('color_id', $colorIds)->each(fn($img) => @unlink($path . '/' . $img->image));
+                ProductColorImage::whereIn('color_id', $colorIds)->delete();
+                ProductColor::whereIn('id', $colorIds)->delete();
+            }
+
+            $colorMap = [];
+            foreach ($request->product_img as $index => $imgData) {
+                $colorKey = ($imgData['color_name'] ?? '') . '|' . ($imgData['color_code'] ?? '');
+
+                if (!isset($colorMap[$colorKey])) {
+                    $colorMap[$colorKey] = ProductColor::create([
+                        'product_id' => $product->id,
+                        'color_name' => $imgData['color_name'] ?? null,
+                        'color_code' => $imgData['color_code'] ?? null,
+                    ]);
+                }
+
+                if ($request->hasFile("product_img.$index.color_image")) {
+                    $imageFiles = $request->file("product_img.$index.color_image");
+                    if (!is_array($imageFiles)) {
+                        $imageFiles = [$imageFiles];
+                    }
+                    foreach ($imageFiles as $imgIndex => $file) {
+                        $filename = $product->id . '_' . $index . '_' . $imgIndex . '_' . time() . '_' . $file->getClientOriginalName();
+                        $file->move($path, $filename);
+                        ProductColorImage::create([
+                            'color_id' => $colorMap[$colorKey]->id,
+                            'image'    => $filename,
+                        ]);
                     }
                 }
             }
-            $productImgArr = [];
-            // foreach($request->product_img as $index => $imgData){
-            //     $colorName = $imgData['color_name'] ?? null;
-            //     $colorCode = $imgData['color_code'] ?? null;
-                // if (isset($imgData['color_image'])) {
-                //     $imageFile = $request->file("product_img.$index.color_image");
-                //     $originalFilename = $product->id.'_'.$index. '_'. time() .'_' . $imageFile->getClientOriginalName();
-                //     $imageFile->move($path, $originalFilename);
-
-                //     $productImgArr[] = [
-                //         'color_name' => $colorName,
-                //         'color_code' => $colorCode,
-                //         'image' => $originalFilename,
-                //     ];
-                // }
-                $productImgArr = [];
-                foreach ($request->product_img as $index => $imgData) {
-                    $colorName = $imgData['color_name'] ?? null;
-                    $colorCode = $imgData['color_code'] ?? null;
-                    // Find if this color already exists
-                    $existingIndex = null;
-                    foreach ($productImgArr as $key => $item) {
-                        if ($item['color_name'] == $colorName && $item['color_code'] == $colorCode) {
-                            $existingIndex = $key;
-                            break;
-                        }
-                    }
-                    // If not exist, create new entry
-                    if ($existingIndex === null) {
-                        $productImgArr[] = [
-                            'color_name' => $colorName,
-                            'color_code' => $colorCode,
-                            'images' => []
-                        ];
-                        $existingIndex = count($productImgArr) - 1;
-                    }
-                    // Handle multiple images
-                    if ($request->hasFile("product_img.$index.color_image")) {
-                        $imageFiles = $request->file("product_img.$index.color_image");
-                        foreach ($imageFiles as $imgIndex => $imageFile) {
-                            $originalFilename = $product->id . '_' . $index . '_' . $imgIndex . '_' . time() . '_' . $imageFile->getClientOriginalName();
-                            $imageFile->move($path, $originalFilename);
-                            $productImgArr[$existingIndex]['images'][] = $originalFilename;
-                        }
-                    }
-                }
-            // }
         }
-        $product->product_colors_images = $productImgArr;
-        $product->save();
 
         return response()->json([
             'success' => true,
@@ -370,11 +348,11 @@ class ProductController extends Controller
                 'errors' => $validator->errors(),
             ]);
         }
-        $products = Product::query();
+        $products = Product::query()->with(['productColors.productColorImages']);
         if(isset($request->product_id) && $request->product_id != ''){
-            $products = $products->where('id', $request->product_id)->select('id', 'category_id', 'sub_category_id', 'product_name', 'product_description', 'product_colors_images', 'units_per_box', 'weight_per_box', 'length', 'width', 'height', 'technical_video_url', 'specifications')->with(['category:id,category_name', 'subCategory:id,category_id,sub_category_name'])->get();
+            $products = $products->where('id', $request->product_id)->select('id', 'category_id', 'sub_category_id', 'product_name', 'product_description', 'units_per_box', 'weight_per_box', 'length', 'width', 'height', 'technical_video_url', 'specifications')->with(['category:id,category_name', 'subCategory:id,category_id,sub_category_name'])->get();
         }else{
-            $products = $products->select('id', 'product_name', 'product_description', 'specifications', 'product_colors_images');
+            $products = $products->select('id', 'product_name', 'product_description', 'specifications');
             if (isset($request->search)) {
                 $search = $request->search;
                 $products = $products->where(function ($query) use ($search) {
@@ -390,38 +368,20 @@ class ProductController extends Controller
             $products = $products->get();
         }
 
-        // $products = $products->map(function ($product) {
-        //     $productColors = collect($product->product_colors_images ?? [])->map(function ($img) {
-        //         return [
-        //             'color_name' => $img['color_name'] ?? null,
-        //             'color_code' => $img['color_code'] ?? null,
-        //             'image' => isset($img['image']) ? url('images/product_images/' . $img['image']) : null
-        //         ];
-        //     });
-        //     $product->product_colors_images = $productColors;
-        //     return $product;
-        // });
         $products = $products->map(function ($product) {
-            $productColors = collect($product->product_colors_images ?? [])->map(function ($img) {
-                $images = [];
-                if (!empty($img['images'])) {
-                    // If already array
-                    if (is_array($img['images'])) {
-                        $images = collect($img['images'])->map(function ($image) {
-                            return url('images/product_images/' . $image);
-                        })->toArray();
-                    } else {
-                        // If single image (backward compatibility)
-                        $images[] = url('images/product_images/' . $img['images']);
-                    }
-                }
+            $colors = $product->productColors->map(function ($color) {
                 return [
-                    'color_name' => $img['color_name'] ?? null,
-                    'color_code' => $img['color_code'] ?? null,
-                    'images' => $images
+                    'color_name' => $color->color_name,
+                    'color_code' => $color->color_code,
+                    'images'     => $color->productColorImages->map(fn($img) => url('images/product_images/' . $img->image))->values()->toArray(),
                 ];
-            });
-            $product->product_colors_images = $productColors;
+            })->values();
+
+            $product->product_colors_images = $colors->isEmpty()
+                ? [['color_name' => null, 'color_code' => null, 'images' => []]]
+                : $colors;
+
+            unset($product->productColors);
             return $product;
         });
         
