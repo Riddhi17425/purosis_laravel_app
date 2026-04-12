@@ -72,6 +72,7 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
     Route::post('add-update-subcategory', [ProductController::class, 'addUpdateSubCategory']);
     Route::get('get-sub-categories', [ProductController::class, 'getSubcategories']);
     Route::post('add-update-product', [ProductController::class, 'addUpdateProduct']);
+
     Route::post('update-product-colorimage', [ProductController::class, 'updateProductColorImage']);
     Route::post('delete-product-colorimage', [ProductController::class, 'deleteProductColorImage']);
     Route::get('get-products', [ProductController::class, 'getProducts']);
@@ -96,6 +97,7 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
 
 // DISTRIBUTOR
 Route::middleware('auth:distributor-api')->prefix('distributor')->group(function () {
+    Route::post('get-assets-count', [DistributorController::class, 'getAssetsCount']);
     Route::post('add-to-cart', [DistributorController::class, 'addToCart']);
     Route::get('view-cart', [DistributorController::class, 'viewCart']);
     Route::post('delete-cart', [DistributorController::class, 'deleteCart']);

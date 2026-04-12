@@ -6,8 +6,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{Admin, Distributor, Order, Product, Brochure, Video, Leaflet, Post, Reel, Dealer, Setting, Banner, SupportMessageInquiry, UserActivityLocation};
+use App\Models\{Admin, Distributor, Order, Product, Brochure, Video, Leaflet, Post, Reel, Dealer, Setting, Banner, SupportMessageInquiry, UserActivityLocation, OrderProduct};
 use Auth;
+use Carbon\Carbon;
 use Illuminate\Validation\Rule;
 use App\Services\LocationTrackerService;
 use App\Services\OtpTransactionService;
@@ -285,7 +286,7 @@ class AdminController extends Controller
             ]);
         }
 
-        $distributor = Distributor::select('id', 'name', 'company_name', 'email', 'phone_no', 'whatsapp_no', 'gst_number', 'area', 'billing_address', 'shipping_address_line', 'shipping_address_pincode', 'is_active', 'alternate_mobile_no', 'landline_no', 'logo');
+        $distributor = Distributor::select('id', 'name', 'company_name', 'email', 'phone_no', 'whatsapp_no', 'gst_number', 'area', 'billing_address', 'shipping_address_line', 'shipping_address_pincode', 'is_active', 'alternate_mobile_no', 'landline_no', 'logo', 'assets_downloaded');
         if(isset($request->distributor_id) && $request->distributor_id != ''){
             $distributor = $distributor->where('id', $request->distributor_id);
         }
@@ -293,9 +294,13 @@ class AdminController extends Controller
         if(isset($distributor) && is_countable($distributor) && count($distributor) > 0){
             foreach($distributor as $key => $val){
                 $val->total_orders = Order::where('distributor_id', $val->id)->count();
-                $val->assets_downloaded = 0; //NEED TO MAKE DYNAMIC
-                $val->last_active = 0; //NEED TO MAKE DYNAMIC LIKE 2 DAYS ago 30 minutes ago
 
+                $lastActivity = UserActivityLocation::where('actor_id', $val->id)
+                    ->where('actor_type', 'distributor')
+                    ->orderBy('event_at', 'desc')
+                    ->value('event_at');
+
+                $val->last_active = $lastActivity ? Carbon::parse($lastActivity)->diffForHumans() : null;
                 if($val->logo){
                     $val->logo = asset('images/profile/'.$val->logo);
                 }
@@ -399,9 +404,14 @@ class AdminController extends Controller
         
         $order = Order::select('id', 'order_number', 'shipping_status', 'created_at')
             ->where('id', $request->order_id)
-            ->with(['orderProducts:id,order_id,product_id,qty,color_code,price,total_weight,total_cbm', 'orderProducts.product:id,product_name,units_per_box,weight_per_box,product_colors_images'])
+            ->with([
+                'orderProducts' => fn($q) => $q->select('id', 'order_id', 'product_id', 'qty', 'color_code', 'color_id', 'price', 'total_weight', 'total_cbm')
+                    ->with([
+                        'product' => fn($pq) => $pq->select('id', 'product_name', 'units_per_box', 'weight_per_box')
+                            ->with('productColors.productColorImages'),
+                    ]),
+            ])
             ->first();
-
         if (!$order) {
             return response()->json([
                 'success' => false,
@@ -409,20 +419,32 @@ class AdminController extends Controller
             ]);
         }
 
-        $data = $order->toArray();
-        foreach ($data['order_products'] as $opIndex => $op) {
-            foreach ($op['product']['product_colors_images'] ?? [] as $imgIndex => $img) {
-                $data['order_products'][$opIndex]['product']['product_colors_images'][$imgIndex]['images'] = array_map(
-                    fn($i) => url('images/product_images/' . $i),
-                    $img['images'] ?? []
-                );
+        foreach ($order->orderProducts as $orderProduct) {
+            if ($orderProduct->product) {
+                $product = clone $orderProduct->product;
+                $orderProduct->setRelation('product', $product);
+                $matchedColor = $product->productColors->firstWhere('id', $orderProduct->color_id)
+                    ?? $product->productColors->firstWhere('color_code', $orderProduct->color_code);
+
+                if ($matchedColor) {
+                    $product->product_colors_images = [[
+                        'color_id'   => $matchedColor->id,
+                        'color_name' => $matchedColor->color_name,
+                        'color_code' => $matchedColor->color_code,
+                        'images'     => $matchedColor->productColorImages->map(fn($img) => url('images/product_images/' . $img->image))->values()->toArray(),
+                    ]];
+                } else {
+                    $product->product_colors_images = [['color_id' => null, 'color_name' => null, 'color_code' => null, 'images' => []]];
+                }
+
+                unset($product->productColors);
             }
         }
 
         return response()->json([
             'success' => true,
             'message' => 'Order details get Successfully',
-            'data'    => $data,
+            'data'    => $order,
         ]);
     }
 

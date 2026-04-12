@@ -6,12 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Mail\AdminPurchaseOrderMail;
 use App\Mail\DistributorPurchaseOrderMail;
 use Illuminate\Http\Request;
-use App\Models\{Cart, Product, Address, Order, OrderProduct, SupportMessageInquiry, DistributorNotification};
+use App\Models\{Cart, Product, Address, Order, OrderProduct, SupportMessageInquiry, DistributorNotification, ProductColor, Distributor};
 use App\Services\LocationTrackerService;
 use App\Services\FirebaseNotificationService;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Auth;
 use Exception;
 use Illuminate\Support\Facades\Log;
@@ -32,11 +33,17 @@ class DistributorController extends Controller
         $validator = Validator::make($request->all(), [
             'product_id' => 'nullable|exists:products,id',
             'qty' => 'required',
-            'color_code' => 'required'
+            //'color_code' => 'required'
+            'color_id' => [
+                'required',
+                Rule::exists('product_colors', 'id')->where('product_id', $request->product_id),
+            ]
         ], [
             'product_id.required' => 'Please select the product name.',
             'qty.required' => 'Please enter the Quantity.',
-            'color_code.required' => 'Please enter the Color Code.',
+            //'color_code.required' => 'Please enter the Color Code.',
+            'color_id.required' => 'Please select the Color.',
+            'color_id.exists' => 'The selected color is invalid for the chosen product.',
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -46,7 +53,7 @@ class DistributorController extends Controller
             ]);
         }
 
-        $checkCart = Cart::where('product_id', $request->product_id)->where('distributor_id', Auth::guard('distributor-api')->id())->where('color_code', $request->color_code)->first();
+        $checkCart = Cart::where('product_id', $request->product_id)->where('distributor_id', Auth::guard('distributor-api')->id())->where('color_id', $request->color_id)->first();
         $product = Product::where('id', $request->product_id)->first();
         if(!$checkCart){
             $checkCart = new Cart();
@@ -56,7 +63,7 @@ class DistributorController extends Controller
         $checkCart->distributor_id = Auth::guard('distributor-api')->id();
         $checkCart->product_id = $request->product_id ?? null;
         $checkCart->qty = $request->qty ?? null;
-        $checkCart->color_code = $request->color_code ?? null;
+        $checkCart->color_id = $request->color_id ?? null;
         //$checkCart->price = $request->product_id ?? null;
         $checkCart->units_per_box = $product->units_per_box ?? null;
         $checkCart->weight_per_box = $product->weight_per_box ?? null;
@@ -74,33 +81,34 @@ class DistributorController extends Controller
     }
 
     public function viewCart(Request $request){
-        $cart = Cart::with('product:id,product_name,product_colors_images')->where('distributor_id', Auth::guard('distributor-api')->id())->get();
+        $cart = Cart::with([
+            'product' => fn($q) => $q->select('id', 'product_name')->with('productColors.productColorImages'),
+        ])->where('distributor_id', Auth::guard('distributor-api')->id())->get();
 
         if(isset($cart) && is_countable($cart) && count($cart) > 0){
 
             $cart = $cart->map(function ($cartItem) {
                 if ($cartItem->product) {
-                    $product = $cartItem->product;
-                    $productColors = collect($product->product_colors_images ?? [])->map(function ($img) {
-                        $images = [];
-                        if (!empty($img['images'])) {
-                            if (is_array($img['images'])) {
-                                $images = collect($img['images'])->map(function ($image) {
-                                    return filter_var($image, FILTER_VALIDATE_URL) ? $image : url('images/product_images/' . $image);
-                                })->toArray();
-                            } else {
-                                $imgPath = $img['images'];
-                                $images[] = filter_var($imgPath, FILTER_VALIDATE_URL) ? $imgPath : url('images/product_images/' . $imgPath);
-                            }
-                        }
-                        return [
-                            'color_name' => $img['color_name'] ?? null,
-                            'color_code' => $img['color_code'] ?? null,
-                            'images'     => $images,
-                        ];
-                    });
-                    $product->product_colors_images = $productColors;
+                    $product = clone $cartItem->product;
+                    $cartItem->setRelation('product', $product);
+                    $matchedColor = $product->productColors->firstWhere('id', $cartItem->color_id);
+
+                    if ($matchedColor) {
+                        $product->product_colors_images = [[
+                            'color_id'   => $matchedColor->id,
+                            'color_name' => $matchedColor->color_name,
+                            'color_code' => $matchedColor->color_code,
+                            'images'     => $matchedColor->productColorImages->map(fn($img) => url('images/product_images/' . $img->image))->values()->toArray(),
+                        ]];
+                        $cartItem->color_code = $matchedColor->color_code;
+                    } else {
+                        $product->product_colors_images = [['color_id' => null, 'color_name' => null, 'color_code' => null, 'images' => []]];
+                        $cartItem->color_code = null;
+                    }
+
+                    unset($product->productColors);
                 }
+                $cartItem->makeHidden(['color_id', 'color']);
                 return $cartItem;
             });
 
@@ -347,7 +355,6 @@ class DistributorController extends Controller
         $distributorId = Auth::guard('distributor-api')->id();
         $distributor = Auth::guard('distributor-api')->user();
         $adminEmail = config('global_values.admin_email');
-
         $transportationTypes = config('global_values.transportation_types');
 
         // Determine if it's a Buy Now (direct) or Cart-based checkout
@@ -363,10 +370,14 @@ class DistributorController extends Controller
         if ($isBuyNow) {
             $rules['product_id']  = 'required|exists:products,id';
             $rules['qty']         = 'required|integer|min:1';
-            $rules['color_code']  = 'required|string';
+            // $rules['color_code']  = 'required|string';
+            $rules['color_id'] = [
+                'required',
+                Rule::exists('product_colors', 'id')->where('product_id', $request->product_id),
+            ];
         } else {
             // Allow selecting specific cart items; if omitted, all cart items are used
-            $rules['cart_ids']   = 'nullable|array|min:1';
+            $rules['cart_ids']   = 'required|array|min:1';
             $rules['cart_ids.*'] = 'integer|exists:carts,id';
         }
         $validator = Validator::make($request->all(), $rules, [
@@ -399,7 +410,8 @@ class DistributorController extends Controller
             $items = [[
                 'product_id'     => $product->id,
                 'qty'            => $qty,
-                'color_code'     => $request->color_code,
+                'color_code'     => $request->color_id ? ProductColor::where('id', $request->color_id)->value('color_code') : null,
+                'color_id'       => $request->color_id,
                 // 'price'          => $product->price ?? null,
                 'units_per_box'  => $product->units_per_box ?? null,
                 'weight_per_box' => $product->weight_per_box ?? null,
@@ -413,9 +425,7 @@ class DistributorController extends Controller
             if ($request->filled('cart_ids')) {
                 $cartQuery->whereIn('id', $request->cart_ids);
             }
-
             $cartItems = $cartQuery->get();
-
             if ($cartItems->isEmpty()) {
                 return response()->json([
                     'success' => false,
@@ -426,7 +436,8 @@ class DistributorController extends Controller
             $items = $cartItems->map(fn($c) => [
                 'product_id'     => $c->product_id,
                 'qty'            => $c->qty,
-                'color_code'     => $c->color_code,
+                'color_code'     => $c->color_id ? ProductColor::where('id', $c->color_id)->value('color_code') : null,
+                'color_id'       => $c->color_id,
                 // 'price'          => $c->price,
                 'units_per_box'  => $c->units_per_box,
                 'weight_per_box' => $c->weight_per_box,
@@ -529,7 +540,7 @@ class DistributorController extends Controller
         $summary = [
             'total_orders' => (clone $allOrders)->count(),
             'pending'      => (clone $allOrders)->where('shipping_status', 'pending')->count(),
-            'confirm'      => (clone $allOrders)->where('shipping_status', 'confirmed')->count(),
+            'confirm'      => (clone $allOrders)->where('shipping_status', 'approved')->count(),
             'failed'       => (clone $allOrders)->where('shipping_status', 'failed')->count(),
         ];
 
@@ -576,7 +587,13 @@ class DistributorController extends Controller
         $order = Order::select('id', 'order_number', 'shipping_status', 'created_at')
             ->where('id', $request->order_id)
             ->where('distributor_id', $distributorId)
-            ->with(['orderProducts:id,order_id,product_id,qty,color_code,price,total_weight,total_cbm', 'orderProducts.product:id,product_name,units_per_box,weight_per_box,product_colors_images'])
+            ->with([
+                'orderProducts' => fn($q) => $q->select('id', 'order_id', 'product_id', 'qty', 'color_code', 'color_id', 'price', 'total_weight', 'total_cbm')
+                    ->with([
+                        'product' => fn($pq) => $pq->select('id', 'product_name', 'units_per_box', 'weight_per_box')
+                            ->with('productColors.productColorImages'),
+                    ]),
+            ])
             ->first();
 
         if (!$order) {
@@ -585,13 +602,26 @@ class DistributorController extends Controller
                 'message' => 'Order not found.',
             ]);
         }
-        $data = $order->toArray();
-        foreach ($data['order_products'] as $opIndex => $op) {
-            foreach ($op['product']['product_colors_images'] ?? [] as $imgIndex => $img) {
-                $data['order_products'][$opIndex]['product']['product_colors_images'][$imgIndex]['images'] = array_map(
-                    fn($i) => url('images/product_images/' . $i),
-                    $img['images'] ?? []
-                );
+
+        foreach ($order->orderProducts as $orderProduct) {
+            if ($orderProduct->product) {
+                $product = clone $orderProduct->product;
+                $orderProduct->setRelation('product', $product);
+                $matchedColor = $product->productColors->firstWhere('id', $orderProduct->color_id)
+                    ?? $product->productColors->firstWhere('color_code', $orderProduct->color_code);
+
+                if ($matchedColor) {
+                    $product->product_colors_images = [[
+                        'color_id'   => $matchedColor->id,
+                        'color_name' => $matchedColor->color_name,
+                        'color_code' => $matchedColor->color_code,
+                        'images'     => $matchedColor->productColorImages->map(fn($img) => url('images/product_images/' . $img->image))->values()->toArray(),
+                    ]];
+                } else {
+                    $product->product_colors_images = [['color_id' => null, 'color_name' => null, 'color_code' => null, 'images' => []]];
+                }
+
+                unset($product->productColors);
             }
         }
 
@@ -738,6 +768,21 @@ class DistributorController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'FCM token updated successfully.',
+        ]);
+    }
+
+    public function getAssetsCount(Request $request)
+    {
+        $distributorId = Auth::guard('distributor-api')->id();
+        $distributor = Distributor::where('id', $distributorId)->first();
+        if(isset($distributor) && $distributor != ''){
+            $distributor->increment('assets_downloaded_count');
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Assets count fetched successfully.',
+            'data' => $distributor,
         ]);
     }
    

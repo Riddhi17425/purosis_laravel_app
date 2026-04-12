@@ -525,6 +525,7 @@ class UserController extends Controller
         $products = $products->map(function ($product) {
             $colors = $product->productColors->map(function ($color) {
                 return [
+                    'color_id' => $color->id,
                     'color_name' => $color->color_name,
                     'color_code' => $color->color_code,
                     'images'     => $color->productColorImages->map(fn($img) => url('images/product_images/' . $img->image))->values()->toArray(),
@@ -532,7 +533,7 @@ class UserController extends Controller
             })->values();
 
             $product->product_colors_images = $colors->isEmpty()
-                ? [['color_name' => null, 'color_code' => null, 'images' => []]]
+                ? [['color_id' => null, 'color_name' => null, 'color_code' => null, 'images' => []]]
                 : $colors;
 
             unset($product->productColors);

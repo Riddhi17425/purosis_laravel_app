@@ -28,6 +28,7 @@ return new class extends Migration
             $table->string('shipping_address_line')->nullable();
             $table->string('shipping_address_pincode')->nullable();
             $table->string('logo')->nullable();
+            $table->unsignedBigInteger('assets_downloaded_count')->default(0);
             $table->tinyInteger('is_active')->default(0)->comment('0 = Inactive, 1 = Active');
             $table->timestamps();
         });

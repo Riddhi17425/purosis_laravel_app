@@ -8,6 +8,7 @@ use App\Models\{Category, SubCategory, Product, ProductColor, ProductColorImage}
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
@@ -256,81 +257,88 @@ class ProductController extends Controller
 
     public function updateProductColorImage(Request $request){
         $validator = Validator::make($request->all(), [
-            'product_id' => 'required|exists:products,id',
-            'color_name' => 'required|string',
-            'color_code' => 'required|string',
+            'product_id'         => 'required|exists:products,id',
+            'color_id'           => [
+                'nullable',
+                Rule::exists('product_colors', 'id')->where('product_id', $request->product_id),
+            ],
+            'color_name'         => 'required|string',
+            'color_code'         => 'required|string',
             'existing_img_names' => 'nullable|array',
             'existing_img_names.*' => 'nullable|string',
-            'color_img' => 'nullable|array',
-            'color_img.*.color_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'color_img'          => 'nullable|array',
+            'color_img.*'        => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
         ]);
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed.',
-                'errors' => $validator->errors(),
-            ]);
-        }
-
-        $product = Product::find($request->product_id);
-        if (!$product) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not Found'
+                'errors'  => $validator->errors(),
             ]);
         }
 
         $path = public_path('images/product_images');
-        $existingImages = $product->product_colors_images ?? [];
-        $keepImgNames = array_filter($request->existing_img_names ?? [], fn($n) => !empty($n));
+        $keepImgNames = array_values(array_filter($request->existing_img_names ?? [], fn($n) => !empty($n)));
 
-        $colorFound = false;
-        foreach ($existingImages as &$img) {
-            if ($img['color_name'] == $request->color_name && $img['color_code'] == $request->color_code) {
-                $colorFound = true;
+        if ($request->filled('color_id')) {
+            // ===== UPDATE existing color =====
+            $color = ProductColor::where('id', $request->color_id)
+                ->where('product_id', $request->product_id)
+                ->first();
 
-                // Delete images that are no longer in existing_img_names
-                if (isset($img['images']) && is_array($img['images'])) {
-                    foreach ($img['images'] as $storedImage) {
-                        if (!empty($storedImage) && !in_array($storedImage, $keepImgNames)) {
-                            if (file_exists($path . '/' . $storedImage)) {
-                                @unlink($path . '/' . $storedImage);
-                            }
-                        }
-                    }
-                }
-
-                // Retain only the images the client wants to keep
-                $img['images'] = array_values($keepImgNames);
-
-                // Upload and append new images
-                if ($request->hasFile('color_img')) {
-                    foreach ($request->file('color_img') as $imgIndex => $imageFile) {
-                        $originalFilename = $product->id . '_' . $imgIndex . '_' . time() . '_' . $imageFile->getClientOriginalName();
-                        $imageFile->move($path, $originalFilename);
-                        $img['images'][] = $originalFilename;
-                    }
-                }
-                break;
+            if (!$color) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Color not found for this product.',
+                ]);
             }
-        }
-        unset($img);
 
-        if (!$colorFound) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Color entry not found for this product.',
+            $color->color_name = $request->color_name;
+            $color->color_code = $request->color_code;
+            $color->save();
+
+            // Delete images not in existing_img_names
+            $imagesToDelete = ProductColorImage::where('color_id', $color->id)
+                ->whereNotIn('image', $keepImgNames)
+                ->get();
+
+            foreach ($imagesToDelete as $img) {
+                @unlink($path . '/' . $img->image);
+                $img->delete();
+            }
+        } else {
+            // ===== CREATE new color =====
+            $color = ProductColor::create([
+                'product_id' => $request->product_id,
+                'color_name' => $request->color_name,
+                'color_code' => $request->color_code,
             ]);
         }
 
-        // Save updated images array back to product
-        $product->product_colors_images = $existingImages;
-        $product->save();
+        // Upload and save new images
+        if ($request->hasFile('color_img')) {
+            foreach ($request->file('color_img') as $imgIndex => $file) {
+                $filename = $request->product_id . '_' . $color->id . '_' . $imgIndex . '_' . time() . '_' . $file->getClientOriginalName();
+                $file->move($path, $filename);
+                ProductColorImage::create([
+                    'color_id' => $color->id,
+                    'image'    => $filename,
+                ]);
+            }
+        }
+
+        $color->load('productColorImages');
+        $response = [
+            'color_id'   => $color->id,
+            'color_name' => $color->color_name,
+            'color_code' => $color->color_code,
+            'images'     => $color->productColorImages->map(fn($img) => url('images/product_images/' . $img->image))->values()->toArray(),
+        ];
 
         return response()->json([
             'success' => true,
-            'message' => 'Product color image updated Successfully',
-            'data' => $product
+            'message' => $request->filled('color_id') ? 'Product color image updated Successfully' : 'Product color image added Successfully',
+            'data'    => $response,
         ]);
     }
 
@@ -371,6 +379,7 @@ class ProductController extends Controller
         $products = $products->map(function ($product) {
             $colors = $product->productColors->map(function ($color) {
                 return [
+                    'color_id' => $color->id,
                     'color_name' => $color->color_name,
                     'color_code' => $color->color_code,
                     'images'     => $color->productColorImages->map(fn($img) => url('images/product_images/' . $img->image))->values()->toArray(),
@@ -378,7 +387,7 @@ class ProductController extends Controller
             })->values();
 
             $product->product_colors_images = $colors->isEmpty()
-                ? [['color_name' => null, 'color_code' => null, 'images' => []]]
+                ? [['color_id' => null, 'color_name' => null, 'color_code' => null, 'images' => []]]
                 : $colors;
 
             unset($product->productColors);
