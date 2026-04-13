@@ -410,5 +410,34 @@ class ProductController extends Controller
             ]);
         }
     }
+
+    public function deleteProductColor(Request $request){
+        $validator = Validator::make($request->all(), [
+            'color_id' => 'required|exists:product_colors,id',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $images = ProductColorImage::where('color_id', $request->color_id)->get();
+        foreach ($images as $image) {
+            $path = public_path('images/product_images/' . $image->image);
+            if (file_exists($path)) {
+                @unlink($path);
+            }
+            $image->delete();
+        }
+
+        ProductColor::where('id', $request->color_id)->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Product color and its images deleted successfully.',
+        ]);
+    }
 }
 

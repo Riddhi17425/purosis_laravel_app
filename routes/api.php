@@ -50,6 +50,7 @@ Route::middleware('verify.token')->group(function () {
 
 //ADMIN
 Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
+    Route::get('get-notifications', [AdminController::class, 'getNotifications']);
     Route::post('update-support-details', [AdminController::class, 'updateSupportDetails']);
     Route::get('get-dashboard-data', [AdminController::class, 'getDashboardData']);
     Route::get('order-history', [AdminController::class, 'orderHistory']);
@@ -74,7 +75,7 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
     Route::post('add-update-product', [ProductController::class, 'addUpdateProduct']);
 
     Route::post('update-product-colorimage', [ProductController::class, 'updateProductColorImage']);
-    Route::post('delete-product-colorimage', [ProductController::class, 'deleteProductColorImage']);
+    Route::post('delete-product-color', [ProductController::class, 'deleteProductColor']);
     Route::get('get-products', [ProductController::class, 'getProducts']);
 
     Route::post('add-update-brochure', [MarketingController::class, 'addUpdateBrochure']);
@@ -88,6 +89,7 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
     Route::post('add-update-reel', [ReelController::class, 'addUpdateReel']);
     Route::get('get-reels', [ReelController::class, 'getReels']);
     Route::post('stock-inward', [PromotionalStockController::class, 'stockInward']);
+    Route::post('stock-outward', [PromotionalStockController::class, 'stockOutward']);
     Route::post('update-stock', [PromotionalStockController::class, 'updateStock']);
     Route::post('delete-stock', [PromotionalStockController::class, 'deleteStock']);
     Route::Post('user-activity-logs', [AdminController::class, 'userActivityLogs']);    
@@ -97,7 +99,7 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
 
 // DISTRIBUTOR
 Route::middleware('auth:distributor-api')->prefix('distributor')->group(function () {
-    Route::post('get-assets-count', [DistributorController::class, 'getAssetsCount']);
+    Route::post('store-assets-count', [DistributorController::class, 'storeAssetsCount']);
     Route::post('add-to-cart', [DistributorController::class, 'addToCart']);
     Route::get('view-cart', [DistributorController::class, 'viewCart']);
     Route::post('delete-cart', [DistributorController::class, 'deleteCart']);

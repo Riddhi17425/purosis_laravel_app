@@ -210,17 +210,17 @@ class UserController extends Controller
 
     public function getBrochures(Request $request){
         // SEND FIREBASE NOTIFICATION
-        $fcmToken = 'cBJSsLfxR22pYIA5xYifEh:APA91bE2hbqt1PG31OW5q3fL9ZwLyZIwT4hETmBxXzLVoE-12boF4I3BGAAoPxNwOBgTZMjpiteYPMq-F1Cqmian8l3z9l_K6MykH18vu-zMCNZKBGYnKJQ';
-        if ($fcmToken) {
-            $this->firebaseNotificationService->sendNotification(
-                $fcmToken,
-                'Order # Confirmed',
-                'Your order has been placed successfully and is being processed.',
-                ['order_id' => (string) 1]
-            );
-        }
+        // $fcmToken = 'cBJSsLfxR22pYIA5xYifEh:APA91bE2hbqt1PG31OW5q3fL9ZwLyZIwT4hETmBxXzLVoE-12boF4I3BGAAoPxNwOBgTZMjpiteYPMq-F1Cqmian8l3z9l_K6MykH18vu-zMCNZKBGYnKJQ';
+        // if ($fcmToken) {
+        //     $this->firebaseNotificationService->sendNotification(
+        //         $fcmToken,
+        //         'Order # Confirmed',
+        //         'Your order has been placed successfully and is being processed.',
+        //         ['order_id' => (string) 1]
+        //     );
+        // }
 
-        die;
+
         $validator = Validator::make($request->all(), [
             'brochure_id' => 'nullable|exists:brochures,id',
             'filter' => 'nullable'

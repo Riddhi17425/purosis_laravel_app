@@ -540,8 +540,8 @@ class DistributorController extends Controller
         $summary = [
             'total_orders' => (clone $allOrders)->count(),
             'pending'      => (clone $allOrders)->where('shipping_status', 'pending')->count(),
-            'confirm'      => (clone $allOrders)->where('shipping_status', 'approved')->count(),
-            'failed'       => (clone $allOrders)->where('shipping_status', 'failed')->count(),
+            'in_progress'      => (clone $allOrders)->where('shipping_status', 'in-process')->count(),
+            'completed'       => (clone $allOrders)->where('shipping_status', 'delivered')->count(),
         ];
 
         // Build query
@@ -771,7 +771,7 @@ class DistributorController extends Controller
         ]);
     }
 
-    public function getAssetsCount(Request $request)
+    public function storeAssetsCount(Request $request)
     {
         $distributorId = Auth::guard('distributor-api')->id();
         $distributor = Distributor::where('id', $distributorId)->first();

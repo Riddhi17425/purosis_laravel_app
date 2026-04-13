@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{Admin, Distributor, Order, Product, Brochure, Video, Leaflet, Post, Reel, Dealer, Setting, Banner, SupportMessageInquiry, UserActivityLocation, OrderProduct};
+use App\Models\{Admin, Distributor, Order, Product, Brochure, Video, Leaflet, Post, Reel, Dealer, Setting, Banner, SupportMessageInquiry, UserActivityLocation, OrderProduct, DistributorNotification};
 use Auth;
 use Carbon\Carbon;
 use Illuminate\Validation\Rule;
@@ -193,7 +193,7 @@ class AdminController extends Controller
             'shipping_address_line' => 'nullable',
             'shipping_address_pincode' => 'nullable',
             'phone_no' => [
-                'required',
+                'nullable',
                 'digits_between:10,15',
                 Rule::unique('distributors', 'phone_no')->when(
                     !$request->filled('distributor_id'),
@@ -286,11 +286,11 @@ class AdminController extends Controller
             ]);
         }
 
-        $distributor = Distributor::select('id', 'name', 'company_name', 'email', 'phone_no', 'whatsapp_no', 'gst_number', 'area', 'billing_address', 'shipping_address_line', 'shipping_address_pincode', 'is_active', 'alternate_mobile_no', 'landline_no', 'logo', 'assets_downloaded');
+        $distributor = Distributor::select('id', 'name', 'company_name', 'email', 'phone_no', 'whatsapp_no', 'gst_number', 'area', 'billing_address', 'shipping_address_line', 'shipping_address_pincode', 'is_active', 'alternate_mobile_no', 'landline_no', 'logo', 'assets_downloaded_count');
         if(isset($request->distributor_id) && $request->distributor_id != ''){
             $distributor = $distributor->where('id', $request->distributor_id);
         }
-        $distributor = $distributor->get();
+        $distributor = $distributor->orderBy('id', 'DESC')->get();
         if(isset($distributor) && is_countable($distributor) && count($distributor) > 0){
             foreach($distributor as $key => $val){
                 $val->total_orders = Order::where('distributor_id', $val->id)->count();
@@ -315,7 +315,8 @@ class AdminController extends Controller
     }
 
     public function getDashboardData(Request $request){
-        $confirmedOrders = Order::where('status', 'confirmed')->count();
+        $pendingOrders = Order::where('shipping_status', 'pending')->count();
+        $confirmedOrders = Order::where('shipping_status', 'approved')->count();
         $totalOrders = Order::count();
         $totalDistributors = Distributor::count();
         $totalDealers = Dealer::count();
@@ -332,10 +333,11 @@ class AdminController extends Controller
             'success' => true,
             'message' => 'Dashboard data retrieved successfully',
             'data' => [
-                'confirmed_orders' => $confirmedOrders,
+                'pending_orders' => $pendingOrders,
                 'total_orders' => $totalOrders,
+                'confirmed_orders' => $confirmedOrders,                
                 'total_distributors' => $totalDistributors,
-                'total_dealers' => $totalDealers,
+                // 'total_dealers' => $totalDealers,
                 'total_products' => $totalProducts,
                 'marketing_assets' => $marketingAssets,
                 
@@ -857,6 +859,36 @@ class AdminController extends Controller
             'message' => 'User activity logs retrieved successfully.',
             'data' => $logs
         ]);
+    }
+
+     public function getNotifications(Request $request){
+        $notifications = DistributorNotification::with('distributor:id,name,company_name,email')->orderBy('id', 'desc')
+            ->get()
+            ->map(function ($notification) {
+                return [
+                    'id'         => $notification->id,
+                    'distributor'=> $notification->distributor,
+                    'order_id'   => $notification->order_id,
+                    'title'      => $notification->title,
+                    'message'    => $notification->message,
+                    'is_read'    => (bool) $notification->is_read,
+                    'time'       => $notification->created_at,
+                ];
+            });
+
+        if(isset($notifications) && is_countable($notifications) && count($notifications) > 0){
+            return response()->json([
+                'success'      => true,
+                'message'      => 'Notifications fetched successfully.',
+                //'unread_count' => $unreadCount,
+                'data'         => $notifications,
+            ]);
+        }else{  
+            return response()->json([
+                'success'      => false,
+                'message'      => 'Notifications are not available.',
+            ]);
+        }
     }
 }
  
