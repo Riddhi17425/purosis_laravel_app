@@ -10,6 +10,7 @@ use Auth;
 class DealerController extends Controller
 {
     public function updateProfile(Request $request){
+        
         $user = Auth::guard('dealer-api')->user();
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',

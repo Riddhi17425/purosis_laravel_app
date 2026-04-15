@@ -502,6 +502,8 @@ class DistributorController extends Controller
                     ['order_id' => (string) $order->id]
                 );
             }
+            // SEND NOTIFICATION TO ADMIN
+            
         } catch (Exception $e) {
             Log::error('Distributor Purchase Order Firebase notification sending failed: '.$e->getMessage());
         }

@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{Post, Brochure, Reel, Leaflet, Subcategory, Product, ProductColor, ProductColorImage, Distributor, Dealer, Video, Banner, Order, PromotionalStockTransaction, Category, UserActivityLocation};
+use App\Models\{Post, Brochure, Reel, Leaflet, SubCategory, Product, ProductColor, ProductColorImage, Distributor, Dealer, Video, Banner, Order, PromotionalStockTransaction, Category, UserActivityLocation};
 use App\Services\LocationTrackerService;
 use App\Services\OtpTransactionService;
 use DB;
@@ -105,7 +105,6 @@ class UserController extends Controller
         }elseif(isset($request->user_type) && strtolower($request->user_type) == 'dealer'){
             $user = Dealer::where('phone_no', $request->phone_no)->first();
         }
-
         if (!$user) {
             return response()->json([
                 'success' => false,
@@ -141,7 +140,9 @@ class UserController extends Controller
         $user->token = $token;
         $user->role = $request->user_type;
 
-        if($user->logo){
+        if(isset($request->user_type) && strtolower($request->user_type) == 'dealer' && isset($user->logo)){
+            $user->logo = asset('images/dealer_profile/'.$user->logo);
+        }else{
             $user->logo = asset('images/profile/'.$user->logo);
         }
         $this->locationTrackerService->track('login', $request->user_type, $user->id, $request);
