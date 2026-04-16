@@ -345,9 +345,7 @@ class ProductController extends Controller
     public function getProducts(Request $request){
         $validator = Validator::make($request->all(), [
             'product_id' => 'nullable|exists:products,id',
-            'serach' => 'nullable',
-            'category_id' => 'nullable|exists:categories,id',
-            'sub_category_id' => 'nullable|exists:sub_categories,id',
+            'filter' => 'nullable'
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -358,24 +356,22 @@ class ProductController extends Controller
         }
         $products = Product::query()->with(['productColors.productColorImages']);
         if(isset($request->product_id) && $request->product_id != ''){
-            $products = $products->where('id', $request->product_id)->select('id', 'category_id', 'sub_category_id', 'product_name', 'product_description', 'units_per_box', 'weight_per_box', 'length', 'width', 'height', 'technical_video_url', 'specifications')->with(['category:id,category_name', 'subCategory:id,category_id,sub_category_name'])->get();
-        }else{
-            $products = $products->select('id', 'product_name', 'product_description', 'specifications');
-            if (isset($request->search)) {
-                $search = $request->search;
-                $products = $products->where(function ($query) use ($search) {
-                    $query->where('product_name', 'like', "%{$search}%")->orWhere('product_description', 'like', "%{$search}%");
-                });
+            $products = $products->where('id', $request->product_id)->select('id', 'category_id', 'sub_category_id', 'product_name', 'product_description', 'units_per_box', 'weight_per_box', 'length', 'width', 'height', 'technical_video_url', 'specifications')->with(['category:id,category_name', 'subCategory:id,category_id,sub_category_name']);
+        }else if ($request->has('filter') && $request->filter != '') {
+            $filterVal = json_decode($request->filter, true);
+            if (!empty($filterVal)) {
+                $categories = $filterVal['categories'] ?? [];
+                $subCategories = $filterVal['sub_categories'] ?? [];
+                //$price = $filterVal['price'] ?? [];
+                if (!empty($categories)) {
+                    $products->whereIn('category_id', $categories);
+                }
+                if (!empty($subCategories)) {
+                    $products->whereIn('sub_category_id', $subCategories);
+                }
             }
-            if (isset($request->category_id)) {
-                $products = $products->where('category_id', $request->category_id);
-            }
-            if (isset($request->sub_category_id)) {
-                $products = $products->where('sub_category_id', $request->sub_category_id);
-            }
-            $products = $products->get();
         }
-
+        $products = $products->get();
         $products = $products->map(function ($product) {
             $colors = $product->productColors->map(function ($color) {
                 return [

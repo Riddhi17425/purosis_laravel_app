@@ -278,8 +278,6 @@ class UserController extends Controller
     }
 
     public function getReels(Request $request){
-        
-
         $validator = Validator::make($request->all(), [
             'reel_id' => 'nullable|exists:reels,id',
             'filter' => 'nullable'

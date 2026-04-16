@@ -127,6 +127,24 @@ class ReelController extends Controller
         if(isset($request->reel_id) && $request->reel_id != ''){
             $reels = $reels->where('id', $request->reel_id);
         }
+        if ($request->has('filter') && $request->filter != '') {
+            $filterVal = json_decode($request->filter, true);
+            if (!empty($filterVal)) {
+                $categories = $filterVal['categories'] ?? [];
+                $months = $filterVal['months'] ?? [];
+                $months = array_map('strtolower', $months);
+                $years = $filterVal['years'] ?? [];
+                if (!empty($categories)) {
+                    $reels->whereIn('category', $categories);
+                }
+                if (!empty($months)) {
+                    $reels->whereIn(DB::raw('LOWER(month)'), $months);
+                }
+                if (!empty($years)) {
+                    $reels->whereIn('year', $years);
+                }
+            }
+        }
         $reels = $reels->get();
         if(isset($reels) && is_countable($reels) && count($reels) > 0){
             foreach($reels as $key => $val){

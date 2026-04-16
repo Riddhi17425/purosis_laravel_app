@@ -100,6 +100,25 @@ class MarketingController extends Controller
         if(isset($request->brochure_id) && $request->brochure_id != ''){
             $brochures = $brochures->where('id', $request->brochure_id);
         }
+        if ($request->has('filter') && $request->filter != '') {
+            $filterVal = json_decode($request->filter, true);
+            if (!empty($filterVal)) {
+                $categories = $filterVal['categories'] ?? [];
+                $months = $filterVal['months'] ?? [];
+                $months = array_map('strtolower', $months);
+                $years = $filterVal['years'] ?? [];
+                if (!empty($categories)) {
+                    $brochures->whereIn('category', $categories);
+                }
+                if (!empty($months)) {
+                    $brochures->whereIn(DB::raw('LOWER(month)'), $months);
+                }
+                if (!empty($years)) {
+                    $brochures->whereIn('year', $years);
+                }
+            }
+        }
+
         $brochures = $brochures->get();
         if(isset($brochures) && is_countable($brochures) && count($brochures) > 0){
             foreach($brochures as $key => $val){
@@ -234,6 +253,28 @@ class MarketingController extends Controller
         if(isset($request->video_id) && $request->video_id != ''){
             $videos = $videos->where('id', $request->video_id);
         }
+        if ($request->has('filter') && $request->filter != '') {
+            $filterVal = json_decode($request->filter, true);
+            if (!empty($filterVal)) {
+                $categories = $filterVal['categories'] ?? [];
+                $type = $filterVal['type'] ?? [];
+                $months = $filterVal['months'] ?? [];
+                $months = array_map('strtolower', $months);
+                $years = $filterVal['years'] ?? [];
+                if (!empty($categories)) {
+                    $videos->whereIn('category', $categories);
+                }
+                if (!empty($type)) {
+                    $videos->whereIn('type', $type);
+                }
+                if (!empty($months)) {
+                    $videos->whereIn(DB::raw('LOWER(month)'), $months);
+                }
+                if (!empty($years)) {
+                    $videos->whereIn('year', $years);
+                }
+            }
+        }
         $videos = $videos->get();
         if(isset($videos) && is_countable($videos) && count($videos) > 0){
             foreach($videos as $key => $val){
@@ -302,7 +343,8 @@ class MarketingController extends Controller
         $leaflet->save();
 
         if ($request->hasFile('media_file')) {
-        $destinationPath = public_path('leaflet_media');
+            $destinationPath = public_path('leaflet_media');
+        }
         if (!file_exists($destinationPath)) {
             mkdir($destinationPath, 0755, true);
         }
@@ -328,7 +370,6 @@ class MarketingController extends Controller
         // $leaflet->media_file = json_encode(array_unique($allFiles));
 
         $leaflet->save();
-    }
 
         return response()->json([
             'success' => true,
@@ -352,6 +393,24 @@ class MarketingController extends Controller
         $leaflets = Leaflet::select('id', 'title', 'category', 'media_file', 'month', 'year', 'description', 'is_featured')->with('category:id,product_name');
         if (isset($request->leaflet_id) && $request->leaflet_id != '') {
             $leaflets = $leaflets->where('id', $request->leaflet_id);
+        }
+        if ($request->has('filter') && $request->filter != '') {
+            $filterVal = json_decode($request->filter, true);
+            if (!empty($filterVal)) {
+                $categories = $filterVal['categories'] ?? [];
+                $months = $filterVal['months'] ?? [];
+                $months = array_map('strtolower', $months);
+                $years = $filterVal['years'] ?? [];
+                if (!empty($categories)) {
+                    $leaflets->whereIn('category', $categories);
+                }
+                if (!empty($months)) {
+                    $leaflets->whereIn(DB::raw('LOWER(month)'), $months);
+                }
+                if (!empty($years)) {
+                    $leaflets->whereIn('year', $years);
+                }
+            }
         }
         $leaflets = $leaflets->get();
         if ($leaflets->isEmpty()) {

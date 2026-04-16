@@ -100,6 +100,25 @@ class PostController extends Controller
         if(isset($request->post_id) && $request->post_id != ''){
             $posts = $posts->where('id', $request->post_id);
         }
+        if ($request->has('filter') && $request->filter != '') {
+            $filterVal = json_decode($request->filter, true);
+            if (!empty($filterVal)) {
+                $categories = $filterVal['categories'] ?? [];
+                $months = $filterVal['months'] ?? [];
+                $months = array_map('strtolower', $months);
+                $years = $filterVal['years'] ?? [];
+                if (!empty($categories)) {
+                    $posts->whereIn('category', $categories);
+                }
+                if (!empty($months)) {
+                    $posts->whereIn(DB::raw('LOWER(month)'), $months);
+                }
+                if (!empty($years)) {
+                    $posts->whereIn('year', $years);
+                }
+            }
+        }
+
         $posts = $posts->get();
         if(isset($posts) && is_countable($posts) && count($posts) > 0){
             foreach($posts as $key => $val){
