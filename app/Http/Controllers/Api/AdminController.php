@@ -360,7 +360,7 @@ class AdminController extends Controller
         }
 
         $sortOrder = $request->sort_by === 'oldest' ? 'asc' : 'desc';
-        $orders = Order::select('id', 'order_number', 'total_weight', 'status', 'shipping_status', 'created_at')
+        $orders = Order::select('id', 'order_number', 'total_weight', 'status', 'shipping_status', 'created_at', 'distributor_id')
             ->withCount('orderProducts')
             ->with(['orderProducts' => function     ($query) {
                 $query->select('id', 'order_id', 'product_id')
@@ -370,7 +370,7 @@ class AdminController extends Controller
         if ($request->shipping_status && $request->shipping_status != 'all') {
             $orders = $orders->where('shipping_status', $request->shipping_status);
         }
-        $orders = $orders->get();
+        $orders = $orders->with('distributor:id,name,company_name,email,phone_no')->get();
 
         if ($orders->isNotEmpty()) {
             $orders->transform(function ($order) {

@@ -445,7 +445,7 @@ class UserController extends Controller
         if(isset($videos) && is_countable($videos) && count($videos) > 0){
             foreach($videos as $key => $val){
                 $mediaPath = asset('images/video_media_file');
-                $thumbnailPath = asset('images/video_media_file');
+                $thumbnailPath = asset('images/video_thumbnail');
                 $val->media_file = $mediaPath.'/'.$val->media_file;
                 $val->thumbnail_image = $thumbnailPath.'/'.$val->thumbnail_image;
             }
