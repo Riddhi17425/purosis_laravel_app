@@ -3,7 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Models\{Admin, Dealer, Distributor};
-use App\Http\Controllers\Api\{AdminController, DealerController, DistributorController, ProductController, MarketingController, PostController, ReelController, ProfileController, PromotionalStockController, UserController};
+use App\Http\Controllers\Api\{AdminController, DealerController, DistributorController, ProductController, MarketingController, ReelController, ProfileController, PromotionalStockController, UserController};
 
 /*
 |--------------------------------------------------------------------------
@@ -64,35 +64,42 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
     Route::post('add-update-distributor', [AdminController::class, 'addUpdateDistributor']);
     Route::post('approve-decline-order', [AdminController::class, 'approveDeclineOrder']);
     Route::post('update-shipping-status', [AdminController::class, 'updateShippingStatus']);
-    // Route::post('update-distributor-details', [AdminController::class, 'updateDistributorDetails']); 
     Route::post('update-distributor-status', [AdminController::class, 'updateDistributorStatus']); 
     Route::get('get-support-message-inquiries', [AdminController::class, 'getSupportMessageInquiries']);
+    Route::Post('user-activity-logs', [AdminController::class, 'userActivityLogs']);    
 
     Route::post('add-update-category', [ProductController::class, 'addUpdateCategory']);
+    Route::post('delete-category', [ProductController::class, 'deleteCategory']);
     Route::get('get-categories', [ProductController::class, 'getCategories']);
     Route::post('add-update-subcategory', [ProductController::class, 'addUpdateSubCategory']);
+    Route::post('delete-sub-category', [ProductController::class, 'deleteSubCategory']);
     Route::get('get-sub-categories', [ProductController::class, 'getSubcategories']);
     Route::post('add-update-product', [ProductController::class, 'addUpdateProduct']);
-
     Route::post('update-product-colorimage', [ProductController::class, 'updateProductColorImage']);
     Route::post('delete-product-color', [ProductController::class, 'deleteProductColor']);
+    Route::post('delete-product', [ProductController::class, 'deleteProduct']);
     Route::get('get-products', [ProductController::class, 'getProducts']);
 
     Route::post('add-update-brochure', [MarketingController::class, 'addUpdateBrochure']);
+    Route::post('delete-brochure', [MarketingController::class, 'deleteBrochure']);
     Route::get('get-brochures', [MarketingController::class, 'getBrochures']);
     Route::post('add-update-video', [MarketingController::class, 'addUpdateVideo']);
+    Route::post('delete-video', [MarketingController::class, 'deleteVideo']);
     Route::get('get-videos', [MarketingController::class, 'getVideos']);
     Route::post('add-update-leaflet', [MarketingController::class, 'addUpdateLeaflet']);
+    Route::post('delete-leaflet', [MarketingController::class, 'deleteLeaflet']);
     Route::get('get-leaflets', [MarketingController::class, 'getLeaflets']);
-    Route::post('add-update-post', [PostController::class, 'addUpdatePost']);
-    Route::get('get-posts', [PostController::class, 'getPosts']);
-    Route::post('add-update-reel', [ReelController::class, 'addUpdateReel']);
-    Route::get('get-reels', [ReelController::class, 'getReels']);
+    Route::post('add-update-post', [MarketingController::class, 'addUpdatePost']);
+    Route::post('delete-post', [MarketingController::class, 'deletePost']);
+    Route::get('get-posts', [MarketingController::class, 'getPosts']);
+    Route::post('add-update-reel', [MarketingController::class, 'addUpdateReel']);
+    Route::post('delete-reel', [MarketingController::class, 'deleteReel']);
+    Route::get('get-reels', [MarketingController::class, 'getReels']);
+
     Route::post('stock-inward', [PromotionalStockController::class, 'stockInward']);
     Route::post('stock-outward', [PromotionalStockController::class, 'stockOutward']);
     Route::post('update-stock', [PromotionalStockController::class, 'updateStock']);
     Route::post('delete-stock', [PromotionalStockController::class, 'deleteStock']);
-    Route::Post('user-activity-logs', [AdminController::class, 'userActivityLogs']);    
     Route::get('get-stock-details', [PromotionalStockController::class, 'getStockDetails']);
 
 });

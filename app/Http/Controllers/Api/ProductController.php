@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\{Category, SubCategory, Product, ProductColor, ProductColorImage};
+use App\Models\{Category, SubCategory, Product, ProductColor, ProductColorImage, Cart};
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -60,7 +60,7 @@ class ProductController extends Controller
     }
 
     public function getCategories(Request $reequest){
-        $categories = Category::select('id', 'category_name')->get();
+        $categories = Category::select('id', 'category_name')->whereNull('deleted_at')->get();
         if(isset($categories) && is_countable($categories) && count($categories) > 0){
             return response()->json([
                 'success' => true,
@@ -135,7 +135,7 @@ class ProductController extends Controller
             ]);
         }
 
-        $subcategories = SubCategory::select('id', 'category_id', 'sub_category_name')->where('category_id', $request->category_id)->get();
+        $subcategories = SubCategory::select('id', 'category_id', 'sub_category_name')->where('category_id', $request->category_id)->whereNull('deleted_at')->get();
         if(isset($subcategories) && is_countable($subcategories) && count($subcategories) > 0){
             return response()->json([
                 'success' => true,
@@ -354,7 +354,7 @@ class ProductController extends Controller
                 'errors' => $validator->errors(),
             ]);
         }
-        $products = Product::query()->with(['productColors.productColorImages']);
+        $products = Product::whereNull('deleted_at')->with(['productColors.productColorImages']);
         if(isset($request->product_id) && $request->product_id != ''){
             $products = $products->where('id', $request->product_id)->select('id', 'category_id', 'sub_category_id', 'product_name', 'product_description', 'units_per_box', 'weight_per_box', 'length', 'width', 'height', 'technical_video_url', 'specifications')->with(['category:id,category_name', 'subCategory:id,category_id,sub_category_name']);
         }else if ($request->has('filter') && $request->filter != '') {
@@ -433,6 +433,111 @@ class ProductController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Product color and its images deleted successfully.',
+        ]);
+    }
+
+    public function deleteCategory(Request $request){
+        $validator = Validator::make($request->all(), [
+            'category_id' => 'required|exists:categories,id',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $checkSubCategory = SubCategory::where('category_id', $request->category_id)->whereNull('deleted_at')->exists();
+        $checkProduct = Product::where('category_id', $request->category_id)->whereNull('deleted_at')->exists();
+        if ($checkSubCategory || $checkProduct) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Category cannot be deleted as it has associated subcategories or products.',
+            ]);
+        }
+
+        $category = Category::where('id', $request->category_id)->whereNull('deleted_at')->first();
+        if (!$category) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Category not found or already deleted.',
+            ]);   
+        }
+        $category->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Category deleted successfully.',
+        ]);
+    }
+
+    public function deleteSubCategory(Request $request){
+        $validator = Validator::make($request->all(), [
+            'sub_category_id' => 'required|exists:sub_categories,id',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $checkProduct = Product::where('sub_category_id', $request->sub_category_id)->whereNull('deleted_at')->exists();
+        if ($checkProduct) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sub Category cannot be deleted as it has associated products.',
+            ]);
+        }
+
+        $subCategory = SubCategory::where('id', $request->sub_category_id)->whereNull('deleted_at')->first();
+        if (!$subCategory) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sub Category not found or already deleted.',
+            ]);
+        }
+        $subCategory->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Sub Category deleted successfully.',
+        ]);
+    }
+
+    public function deleteProduct(Request $request){
+        $validator = Validator::make($request->all(), [
+            'product_id' => 'required|exists:products,id',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $checkCart = Cart::where('product_id', $request->product_id)->first();
+        if ($checkCart) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Product cannot be deleted as it is in the cart.',
+            ]);
+        }
+        $product = Product::where('id', $request->product_id)->whereNull('deleted_at')->first();
+        if (!$product) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Product not found or already deleted.',
+            ]);
+        }
+        $product->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Product deleted successfully.',
         ]);
     }
 }

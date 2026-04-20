@@ -373,8 +373,9 @@ class AdminController extends Controller
         $orders = $orders->with('distributor:id,name,company_name,email,phone_no')->get();
 
         if ($orders->isNotEmpty()) {
-            $orders->transform(function ($order) {
+            $orders->transform(function ($order) use ($shippingStatuses) {
                 $order->order_date = $order->created_at->format('M d, Y • h:i A');
+                $order->shipping_status_label = $shippingStatuses[$order->shipping_status] ?? $order->shipping_status;
                 return $order;
             });
             $orders->makeHidden(['created_at']);
@@ -388,7 +389,7 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Order history get Successfully',
-            'data' => $orders,
+            'data' =>  $orders,
         ]);
     }
 
@@ -565,7 +566,7 @@ class AdminController extends Controller
 
     public function getBanners(Request $request)
     {
-        $query = Banner::query();
+        $query = Banner::whereNull('deleted_at');
 
         if ($request->type) {
             $query->where('type', $request->type);
