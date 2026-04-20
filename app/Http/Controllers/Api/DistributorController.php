@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\AdminPurchaseOrderMail;
 use App\Mail\DistributorPurchaseOrderMail;
 use Illuminate\Http\Request;
-use App\Models\{Cart, Product, Address, Order, OrderProduct, SupportMessageInquiry, DistributorNotification, ProductColor, Distributor};
+use App\Models\{Cart, Product, Address, Order, OrderProduct, SupportMessageInquiry, DistributorNotification, ProductColor, Distributor, Wishlist};
 use App\Services\LocationTrackerService;
 use App\Services\FirebaseNotificationService;
 use Illuminate\Support\Str;
@@ -786,6 +786,101 @@ class DistributorController extends Controller
             'message' => 'Assets count fetched successfully.',
             'data' => $distributor,
         ]);
+    }
+
+    public function addDeleteWishlist(Request $request){
+        $validator = Validator::make($request->all(), [
+            'product_id' => 'required|exists:products,id,deleted_at,NULL',
+            'add_or_delete' => 'required|in:1,0',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ]);
+        }
+
+        $distributorId = Auth::guard('distributor-api')->id();
+        $wishlistItem = Wishlist::where('distributor_id', $distributorId)->where('product_id', $request->product_id)->with('product:id,product_name')->first();
+        if ($request->add_or_delete == 1 && $wishlistItem) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Product is already in wishlist.',
+            ]);
+        }
+
+        if ($request->add_or_delete == 0 && $wishlistItem) {
+            $wishlistItem->delete();
+            return response()->json([
+                'success' => true,
+                'message' => 'Product removed from wishlist successfully.',
+            ]);
+        }
+
+        if ($request->add_or_delete == 1 && !$wishlistItem) {
+            Wishlist::create([
+                'distributor_id' => $distributorId,
+                'product_id' => $request->product_id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Product added to wishlist successfully.',
+            ]);
+        }
+    }
+
+    public function getWishlists(Request $request){
+        $distributorId = Auth::guard('distributor-api')->id();
+        $wishlistItems = Wishlist::select('id', 'product_id', 'distributor_id', 'created_at')
+        ->where('distributor_id', $distributorId)
+        ->whereHas('product', function ($query) {
+            $query->whereNull('deleted_at');
+        })
+        ->with([
+            'product' => function ($query) {
+                $query->select('id', 'product_name'); // only required fields
+            },
+            'product.productColors' => function ($query) {
+                $query->select('id', 'product_id', 'color_name', 'color_code');
+            },
+            'product.productColors.productColorImages' => function ($query) {
+                $query->select('id', 'color_id', 'image'); // adjust column name if needed
+            }
+        ])->get();
+
+        if(isset($wishlistItems) && is_countable($wishlistItems) && count($wishlistItems) > 0){
+            $wishlistItems = $wishlistItems->map(function ($item) {
+            $product = $item->product;
+            $colors = $product->productColors->map(function ($color) {
+                return [
+                    'color_id' => $color->id,
+                    'color_name' => $color->color_name,
+                    'color_code' => $color->color_code,
+                    'images' => $color->productColorImages
+                        ? $color->productColorImages->map(fn($img) => url('images/product_images/' . $img->image))->values()->toArray()
+                        : [],
+                ];
+            })->values();
+            $product->product_colors_images = $colors->isEmpty()
+                ? [['color_id' => null, 'color_name' => null, 'color_code' => null, 'images' => []]]
+                : $colors;
+            unset($product->productColors);
+
+            return $item;
+        });
+            return response()->json([
+                'success' => true,
+                'message' => 'Wishlist items fetched successfully.',
+                'data' => $wishlistItems,
+            ]);
+        }else{
+            return response()->json([
+                'success' => false,
+                'message' => 'No products found in wishlist.',
+            ]);
+        }
     }
    
 }

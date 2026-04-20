@@ -107,6 +107,8 @@ Route::middleware('auth:admin-api')->prefix('admin')->group(function () {
 // DISTRIBUTOR
 Route::middleware('auth:distributor-api')->prefix('distributor')->group(function () {
     Route::post('store-assets-count', [DistributorController::class, 'storeAssetsCount']);
+    Route::post('add-delete-wishlist', [DistributorController::class, 'addDeleteWishlist']);
+    Route::get('get-wishlists', [DistributorController::class, 'getWishlists']);
     Route::post('add-to-cart', [DistributorController::class, 'addToCart']);
     Route::get('view-cart', [DistributorController::class, 'viewCart']);
     Route::post('delete-cart', [DistributorController::class, 'deleteCart']);
