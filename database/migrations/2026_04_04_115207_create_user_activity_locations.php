@@ -34,6 +34,7 @@ return new class extends Migration
             $table->decimal('longitude', 10, 7)->nullable();
 
             $table->timestamp('event_at')->nullable();
+            $table->string('device_name')->nullable();
 
             $table->timestamps();
             $table->softDeletes();
@@ -41,6 +42,8 @@ return new class extends Migration
             $table->index(['actor_type', 'actor_id']);
             $table->index('event_type');
             $table->index('order_id');
+
+            
         });
     }
 

@@ -18,7 +18,7 @@ class LocationTrackerService
     ) {
         $ip = $request->ip();
         $userAgent = $request->userAgent();
-
+        $userDevice = $request->device_name ?? null;
         $locationData = [
             'country' => null,
             'state' => null,
@@ -68,6 +68,7 @@ class LocationTrackerService
             'latitude' => $locationData['latitude'],
             'longitude' => $locationData['longitude'],
             'event_at' => now(),
+            'device_name' => $userDevice,
         ]);
     }
 }

@@ -89,7 +89,8 @@ class UserController extends Controller
             'user_type' => 'required|in:' . implode(',', $userType),
             'phone_no' => 'required',
             'otp' => 'required',
-            'device_token' => 'nullable|string'
+            'device_token' => 'nullable|string',
+            'device_name' => 'nullable|string',
         ]);
         if ($validator->fails()) {
             return response()->json([
