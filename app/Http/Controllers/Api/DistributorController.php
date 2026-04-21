@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Mail\AdminPurchaseOrderMail;
-use App\Mail\DistributorPurchaseOrderMail;
+use App\Mail\Admin\AdminPurchaseOrderMail;
+use App\Mail\Distributor\DistributorPurchaseOrderMail; 
 use Illuminate\Http\Request;
 use App\Models\{Cart, Product, Address, Order, OrderProduct, SupportMessageInquiry, DistributorNotification, ProductColor, Distributor, Wishlist};
 use App\Services\LocationTrackerService;
@@ -355,6 +355,7 @@ class DistributorController extends Controller
         $distributorId = Auth::guard('distributor-api')->id();
         $distributor = Auth::guard('distributor-api')->user();
         $adminEmail = config('global_values.admin_email');
+        $adminWhatsappNo = preg_replace('/\D+/', '', (string) config('global_values.admin_whatsapp_no'));
         $transportationTypes = config('global_values.transportation_types');
 
         // Determine if it's a Buy Now (direct) or Cart-based checkout
@@ -492,34 +493,67 @@ class DistributorController extends Controller
         ]);
 
         // SEND FIREBASE NOTIFICATION
-        try {
-            $fcmToken = $distributor->device_token ?? null;
-            if ($fcmToken) {
-                $this->firebaseNotificationService->sendNotification(
-                    $fcmToken,
-                    'Order #' . $order->order_number . ' Confirmed',
-                    'Your order has been placed successfully and is being processed.',
-                    ['order_id' => (string) $order->id]
-                );
-            }
-            // SEND NOTIFICATION TO ADMIN
+        // try {
+        //     $fcmToken = $distributor->device_token ?? null;
+        //     if ($fcmToken) {
+        //         $this->firebaseNotificationService->sendNotification(
+        //             $fcmToken,
+        //             'Order #' . $order->order_number . ' Confirmed',
+        //             'Your order has been placed successfully and is being processed.',
+        //             ['order_id' => (string) $order->id]
+        //         );
+        //     }
+        //     // SEND NOTIFICATION TO ADMIN
             
-        } catch (Exception $e) {
-            Log::error('Distributor Purchase Order Firebase notification sending failed: '.$e->getMessage());
-        }
+        // } catch (Exception $e) {
+        //     Log::error('Distributor Purchase Order Firebase notification sending failed: '.$e->getMessage());
+        // }
 
-        // Send order confirmation email to distributor
-        try {
-            Mail::to($distributor->email)->send(new DistributorPurchaseOrderMail($order));
-            Mail::to($adminEmail)->send(new AdminPurchaseOrderMail($order));
-        } catch (Exception $e) {
-            Log::error('Distributor Purchase Order email sending failed: '.$e->getMessage());
+        // // Send order confirmation email to distributor
+        // try {
+        //     Mail::to($distributor->email)->send(new DistributorPurchaseOrderMail($order));
+        //     Mail::to($adminEmail)->send(new AdminPurchaseOrderMail($order));
+        // } catch (Exception $e) {
+        //     Log::error('Distributor Purchase Order email sending failed: '.$e->getMessage());
+        // }
+
+        $order->load([
+            'orderProducts.product',
+            'billingAddress',
+            'shippingAddress',
+        ]);
+
+        $productSummary = $order->orderProducts
+            ->map(function ($item) {
+                $productName = $item->product->product_name ?? 'Product';
+
+                return $productName . ' x ' . ($item->qty ?? 0);
+            })
+            ->implode(', ');
+
+        $whatsappUrl = null;
+        if (!empty($adminWhatsappNo)) {
+            $message = "New Order Received\n\n" .
+                "*Order No:* {$order->order_number}\n" .
+                "*Distributor:* " . ($distributor->name ?? 'N/A') . "\n" .
+                "*Email:* " . ($distributor->email ?? 'N/A') . "\n" .
+                "*Contact No:* " . ($distributor->phone_no ?? 'N/A') . "\n" .
+                "*Transportation Type:* " . ($order->type ?? 'N/A') . "\n" .
+                "*Products:* " . ($productSummary ?: 'N/A') . "\n" .
+                "*Total Weight:* " . ($order->total_weight ?? 0) . "\n" .
+                "*Total CBM:* " . ($order->total_cbm ?? 0) . "\n" .
+                "*Remarks:* " . ($order->remarks ?? 'N/A');
+
+            $whatsappUrl = 'https://wa.me/' . $adminWhatsappNo . '?text=' . urlencode($message);
         }
 
         return response()->json([
             'success' => true,
             'message' => 'Order placed successfully.',
-            'data'    => $order->load('orderProducts'),
+            'data'    => [
+                'order' => $order,
+                'whatsapp_url' => $whatsappUrl,
+            ],
         ]);
     }
 
