@@ -543,6 +543,7 @@ class UserController extends Controller
         if(isset($products) && is_countable($products) && count($products) > 0){
             foreach($products as $key => $val){
                 $val->specifications = explode(', ', $val->specifications);
+                $val->is_wishlisted = $val->wishlist ? true : false;
             }
             return response()->json([
                 'success' => true,
