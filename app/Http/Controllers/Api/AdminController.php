@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Mail\Distributor\DistributorOrderStatusMail;
+use App\Mail\Distributor\DistributorShippingStatusMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
@@ -715,6 +716,21 @@ class AdminController extends Controller
             $order->status = 'completed';
         }
         $order->save();
+
+        $order->load([
+            'distributor',
+            'billingAddress',
+            'shippingAddress',
+            'orderProducts.product',
+        ]);
+
+        try {
+            if (!empty($order->distributor?->email)) {
+                Mail::to($order->distributor->email)->send(new DistributorShippingStatusMail($order));
+            }
+        } catch (\Exception $e) {
+            Log::error('Distributor shipping status email sending failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'success' => true,
