@@ -29,5 +29,6 @@ class UserActivityLocation extends Model
         'latitude',
         'longitude',
         'event_at',
+        'device_name'
     ];
 }

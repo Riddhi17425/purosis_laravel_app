@@ -374,8 +374,18 @@ class AdminController extends Controller
 
         if ($orders->isNotEmpty()) {
             $orders->transform(function ($order) use ($shippingStatuses) {
+                $currentStatus = $order->shipping_status;
                 $order->order_date = $order->created_at->format('M d, Y • h:i A');
-                $order->shipping_status_label = $shippingStatuses[$order->shipping_status] ?? $order->shipping_status;
+                if (isset($shippingStatuses[$currentStatus])) {
+                    $order->shipping_status = [
+                        [
+                            'key' => $currentStatus,
+                            'value' => $shippingStatuses[$currentStatus]
+                        ]
+                    ];
+                } else {
+                    $order->shipping_status = [];
+                }
                 return $order;
             });
             $orders->makeHidden(['created_at']);
@@ -391,6 +401,17 @@ class AdminController extends Controller
             'message' => 'Order history get Successfully',
             'data' =>  $orders,
         ]);
+    }
+
+    protected function formatKeyValue($array){
+        $result = [];
+        foreach ($array as $key => $value) {
+            $result[] = [
+                'key' => $key,
+                'value' => $value
+            ];
+        }
+        return $result;
     }
 
      public function orderDetails(Request $request){
