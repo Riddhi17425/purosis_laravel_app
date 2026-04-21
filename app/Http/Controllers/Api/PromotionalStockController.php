@@ -3,13 +3,17 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\Admin\PromotionalStockOutwardAdminMail;
+use App\Mail\Distributor\PromotionalStockOutwardDistributorSendMail;
 use Illuminate\Http\Request;
 use App\Models\{PromotionalStock, PromotionalStockTransaction};
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
 class PromotionalStockController extends Controller
 {
-    public function stockInward(Request $request){
+    public function stockInward(Request $request){ 
         $validator = Validator::make($request->all(), [
             'item_name' => 'required',
             'item_id' => 'nullable|exists:promotional_stocks,id',
@@ -105,7 +109,21 @@ class PromotionalStockController extends Controller
         $promotionalStockTransaction->serial_no = 'OUT-'. $promotionalStockTransaction->id;
         $promotionalStockTransaction->save();
 
-        return response()->json([
+        $promotionalStockTransaction->load(['item', 'recipient']);
+
+        $adminEmail = config('global_values.admin_email');
+
+        try {
+            Mail::to($adminEmail)->send(new PromotionalStockOutwardAdminMail($promotionalStockTransaction));
+
+            if (!empty($promotionalStockTransaction->recipient?->email)) {
+                Mail::to($promotionalStockTransaction->recipient->email)->send(new PromotionalStockOutwardDistributorSendMail($promotionalStockTransaction));
+            }
+        } catch (\Exception $e) {
+            Log::error('Promotional stock outward mail sending failed: ' . $e->getMessage());
+        }
+
+        return response()->json([ 
             'success' => true,
             'message' => 'Promotional Stock outward Successfully',
             'data' => $promotionalStockTransaction

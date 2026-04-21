@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Mail;
+namespace App\Mail\Distributor;
 
 use App\Models\Order;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class AdminPurchaseOrderMail extends Mailable
+class DistributorOrderStatusMail extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -25,7 +25,9 @@ class AdminPurchaseOrderMail extends Mailable
 
     public function build()
     {
-        return $this->subject('New Purchase Order Received - Order #' . $this->order->order_number)
-                    ->view('email.orders.admin_purchase_order');
+        $statusLabel = $this->order->shipping_status === 'approved' ? 'Approved' : 'Declined';
+
+        return $this->subject('Order ' . $statusLabel . ' - Order #' . $this->order->order_number)
+                    ->view('email.orders.distributor_order_status'); 
     }
 }
