@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Mail;
+namespace App\Mail\Distributor;
 
 use App\Models\Order;
 use Illuminate\Bus\Queueable;

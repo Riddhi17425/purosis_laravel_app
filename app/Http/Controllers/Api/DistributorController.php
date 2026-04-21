@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Mail\AdminPurchaseOrderMail;
-use App\Mail\DistributorPurchaseOrderMail;
+use App\Mail\Admin\AdminPurchaseOrderMail;
+use App\Mail\Distributor\DistributorPurchaseOrderMail; 
 use Illuminate\Http\Request;
 use App\Models\{Cart, Product, Address, Order, OrderProduct, SupportMessageInquiry, DistributorNotification, ProductColor, Distributor, Wishlist};
 use App\Services\LocationTrackerService;
