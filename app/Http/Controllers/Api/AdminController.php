@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\Distributor\DistributorOrderStatusMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use App\Models\{Admin, Distributor, Order, Product, Brochure, Video, Leaflet, Post, Reel, Dealer, Setting, Banner, SupportMessageInquiry, UserActivityLocation, OrderProduct, DistributorNotification};
 use Auth;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use App\Services\LocationTrackerService;
 use App\Services\OtpTransactionService;
@@ -662,8 +665,23 @@ class AdminController extends Controller
         }
         $order->save();
 
+        $order->load([
+            'distributor',
+            'billingAddress',
+            'shippingAddress',
+            'orderProducts.product',
+        ]);
+
+        try {
+            if (!empty($order->distributor?->email)) {
+                Mail::to($order->distributor->email)->send(new DistributorOrderStatusMail($order));
+            }
+        } catch (\Exception $e) {
+            Log::error('Distributor order status email sending failed: ' . $e->getMessage());
+        }
+
         return response()->json([
-            'success' => true,
+            'success' => true, 
             'message' => "Order has been {$order->status} successfully.",
             'data'    => $order,
         ]);
